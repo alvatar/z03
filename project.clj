@@ -21,14 +21,16 @@
                  ;; Database
                  [org.clojure/java.jdbc "0.7.1"]
                  [org.postgresql/postgresql "42.1.4"]
+                 ;; HTML
+                 [hiccup "1.0.5"]
+                 [garden "1.3.2"]
                  ;; Cljs
                  [reagent "0.8.0-alpha1"]
                  [datascript "0.16.2"]
                  [posh "0.5.5"]]
 
   :plugins [[lein-cljsbuild "1.1.3"]
-            [lein-environ "1.0.3"]
-            [lein-less "1.7.5"]]
+            [lein-environ "1.0.3"]]
 
   :min-lein-version "2.6.1"
 
@@ -104,9 +106,6 @@
 
   :doo {:build "test"}
 
-  :less {:source-paths ["src/less"]
-         :target-path "resources/public/css"}
-
   :profiles {:dev
              {:dependencies [[figwheel "0.5.13"]
                              [figwheel-sidecar "0.5.13"]
@@ -127,7 +126,6 @@
              :uberjar
              {:source-paths ^:replace ["src/clj" "src/cljc"]
               :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
-              :hooks [leiningen.less]
               :omit-source true
               :aot :all
               :env {:env "uberjar"}}})

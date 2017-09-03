@@ -21,7 +21,8 @@
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
             [taoensso.sente.packers.transit :as sente-transit]
             ;; Internal
-            [z03.actions :as actions])
+            [z03.actions :as actions]
+            [z03.html :as html])
   (:import (java.lang.Integer)
            (java.net InetSocketAddress))
   (:gen-class))
@@ -38,11 +39,13 @@
   (def chsk-send! send-fn) ; ChannelSocket's send API fn
   (def connected-uids connected-uids))
 
+(defn user-home [req]
+  {:status 200
+   :headers {"Content-Type" "text/html; charset=utf-8"}
+   :body html/index})
+
 (defroutes app
-  (GET "/" _
-       {:status 200
-        :headers {"Content-Type" "text/html; charset=utf-8"}
-        :body (io/input-stream (io/resource "public/index.html"))})
+  (GET "/" req user-home)
   (resources "/")
   ;; Sente
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
