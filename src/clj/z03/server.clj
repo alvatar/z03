@@ -5,7 +5,7 @@
             ;; Ring
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.gzip :refer [wrap-gzip]]
-            [ring.middleware.logger :refer [wrap-with-logger]]
+            [ring.util.response :refer [response content-type]]
             ;; Compojure
             [compojure.core :refer [ANY GET PUT POST DELETE defroutes]]
             [compojure.route :refer [resources not-found]]
@@ -40,9 +40,8 @@
   (def connected-uids connected-uids))
 
 (defn user-home [req]
-  {:status 200
-   :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body html/index})
+  (-> (response html/user-home)
+      (content-type "text/html; charset=utf-8")))
 
 (defroutes app
   (GET "/" req user-home)
