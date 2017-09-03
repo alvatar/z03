@@ -76,10 +76,10 @@
 
 (defonce server (atom nil))
 
-(onelog.core/set-debug!)
+;; (onelog.core/set-debug!)
 
 (defn start! [& [port ip]]
-  (log/set-level! :debug)
+  ;; (log/set-level! :debug)
   (actions/start-sente-router! ch-chsk)
   (reset! server
           (aleph.http/start-server
@@ -87,7 +87,7 @@
                (wrap-defaults (assoc-in (if (env :production) secure-site-defaults site-defaults)
                                         [:params :keywordize] true))
                wrap-exceptions
-               (wrap-with-logger :debug println)
+               ;; (wrap-with-logger :debug println)
                wrap-gzip)
            {:port (Integer. (or port (env :port) 5000))
             :socket-address (if ip (new InetSocketAddress ip port))})))

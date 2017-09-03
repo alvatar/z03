@@ -1,5 +1,5 @@
 (defproject z03 "0.1.0-SNAPSHOT"
-  :description "Myproject"
+  :description "Z03"
   :url "http://z03.org"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
@@ -22,8 +22,9 @@
                  [org.clojure/java.jdbc "0.7.1"]
                  [org.postgresql/postgresql "42.1.4"]
                  ;; Cljs
-                 [rum "0.10.8" :exclusions [cljsjs/react cljsjs/react-dom]]
-                 [cljs-react-material-ui "0.2.48"]]
+                 [reagent "0.8.0-alpha1"]
+                 [datascript "0.16.2"]
+                 [posh "0.5.5"]]
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-environ "1.0.3"]
