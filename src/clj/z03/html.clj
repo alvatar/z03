@@ -17,8 +17,7 @@
      ;; Awesome Font
      [:link {:rel "stylesheet" :href "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"}]
      ;; Gridlex
-     [:link {:rel "stylesheet" :href "https://cdnjs.cloudflare.com/ajax/libs/gridlex/2.4.0/gridlex.min.css"}]
-     [:style common-css]]
+     [:link {:rel "stylesheet" :href "https://cdnjs.cloudflare.com/ajax/libs/gridlex/2.4.0/gridlex.min.css"}]]
     [:body
      [:div#app]
      [:script {:src "js/compiled/z03.js" :type "text/javascript"}]]]))
