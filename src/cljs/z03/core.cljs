@@ -95,18 +95,20 @@
   (let [canvas-dom (atom nil)
         monet-canvas (atom nil)]
     [:div.container
-     [:canvas.fill-parent
-      {:ref (fn [e]      ; Called when node created and destroyed only
+     [:canvas
+      {:width (:width @window) :height (:height @window)
+       :ref (fn [e]      ; Called when node created and destroyed only
               (when e
                 (reset! canvas-dom e)
                 (reset! monet-canvas (canvas/init @canvas-dom "2d"))
                 (canvas/add-entity @monet-canvas :background
-                                   (canvas/entity {:x 0 :y 0 :w (:width @window) :h (:height @window)} ; val
-                                                  nil ; update function
-                                                  (fn [ctx val] ; draw function
+                                   (canvas/entity {:x (/ (:width @window) 2) :y (/ (:height @window) 2) :r 20}
+                                                  nil
+                                                  (fn [ctx val]
                                                     (-> ctx
                                                         (canvas/fill-style "#f00")
-                                                        (canvas/fill-rect val)))))))}]
+                                                        (canvas/circle val)
+                                                        (canvas/fill)))))))}]
      [:div.drawer.bg-aqua
       [:h2 {:style {:margin-left "2rem" :height "2rem"}} "Files in checkpoint"]
       [:div.file-menu
