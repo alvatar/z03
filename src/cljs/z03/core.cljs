@@ -6,11 +6,12 @@
    [taoensso.sente :as sente :refer (cb-success?)]
    [taoensso.sente.packers.transit :as sente-transit]
    [reagent.core :as r]
+   [datascript.core :as d]
    [posh.reagent :as p]
    [monet.canvas :as canvas]
    [goog.style]
    [garden.core :refer [css]]
-   [garden.core :as u]
+   [garden.units :as u]
    [garden.stylesheet :as stylesheet]
    [garden.color :as color :refer [hsl rgb]]
    ;; -----
@@ -51,9 +52,13 @@
 ;; UI Components
 ;;
 
-(defkeyframes drawer-animation
-  [:from {:right "-50%"}]
+(defkeyframes drawer-animation-show
+  [:from {:right (u/percent -50)}]
   [:to {:right 0}])
+
+(defkeyframes drawer-animation-hide
+  [:from {:right 0}]
+  [:to {:right (u/percent -50)}])
 
 (def styles
   ;; Ref http://www.webp.ch/fourre-tout/target/#!/dgellow.fourre_tout.garden
@@ -68,15 +73,25 @@
    [:h1 :h2 {:font-family ["Bitter" "sans-serif"]
              :font-weight 700}]
    [:.fill-parent {:width "100%" :height "100%"}]
+   [:.lfloat {:float "left"}]
+   [:.rfloat {:float "right"}]
    ;; Colors
    [:.bg-aqua {:background-color "#7fdbff"}]
    ;; Animations
-   drawer-animation
+   drawer-animation-show
+   drawer-animation-hide
    ;; Components
-   [:.drawer {:position "absolute"
-              :right 0 :top 0
-              :width "50%" :height "100%"
-              :animation [[drawer-animation "1.5s"]]}]
+   [:.header {:position "absolute" :left 0 :top 0
+              :margin {:left (u/rem 0.5) :top (u/rem 0.5)}
+              :font {:family ["Bitter" "sans-serif"]
+                     :weight 400
+                     :size (u/rem 0.7)}}]
+   (let [drawer {:position "absolute" :top 0
+                 :width "50%" :height "100%"}]
+     [[:.drawer-show (merge drawer {:right 0
+                                    :animation [[drawer-animation-show "1.5s"]]})]
+      [:.drawer-hide (merge drawer {:right (u/percent -50)
+                                    :animation [[drawer-animation-hide "1.0s"]]})]])
    [:.file-menu]
    [:.file-item {:padding "2rem 2rem 2rem 2rem"}]))
 
@@ -85,19 +100,53 @@
   (goog.style/setStyles @style-node styles)
   (reset! style-node (goog.style/installStyles styles)))
 
+(defn header []
+  [:div.header
+   [:div.lfloat {:style {:margin-right "0.5rem"}}
+    [:i.fa.fa-undo {:aria-hidden "true"}]]
+   [:div.lfloat
+    @(p/q '[:find ?n .
+            :where [?e]
+            [?e :user/name ?n]]
+          db-conn)]])
+
+(defonce ui-state
+  {:selected-revision (r/atom nil)})
+
+(defn main []
+  [:div
+   [:div.revisions
+    [:div.current-revision {:style {:position "absolute" :top "50%" :left "50%"
+                                    :margin-left "-30px" :margin-top "-40px"
+                                    :cursor "pointer"}
+                            :on-click #(reset! (:selected-revision ui-state) "main")}
+     [:div.lfloat {:style {:font-size "80px"}}
+      [:i.fa.fa-dot-circle-o {:aria-hidden "true"}]]]
+    [:div.revision {:style {:position "absolute" :top "50%" :left "30%"
+                            :margin-left "-25px" :margin-top "-25px"}}
+     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]
+    [:div.revision {:style {:position "absolute" :top "50%" :left "20%"
+                            :margin-left "-25px" :margin-top "-25px"}}
+     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]
+    [:div.revision {:style {:position "absolute" :top "50%" :left "5%"
+                            :margin-left "-25px" :margin-top "-25px"}}
+     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]]
+   [(if @(:selected-revision ui-state) :div.drawer-show.bg-aqua :div.drawer-hide.bg-aqua)
+    [:h2 {:style {:margin-left "2rem" :height "2rem"}} "Files in checkpoint"]
+    [:div.file-menu
+     (let [files ["file1.psd" "file2.psd" "file3.png" "file4.jpg" "file5.png" "file6.jpg"]]
+       (for [f files]
+         [:div.file-item.col {:key f} f]))]]
+   [header]])
+
 (defn app []
-  #_(str "HELLO "
-         @(p/q '[:find ?n .
-                 :where [?e]
-                 [?e :user/name ?n]]
-               db-conn)
-         "!")
   (let [canvas-dom (atom nil)
         monet-canvas (atom nil)]
     [:div.container
      [:canvas
       {:width (:width @window) :height (:height @window)
-       :ref (fn [e]      ; Called when node created and destroyed only
+       :on-click #(reset! (:selected-revision ui-state) nil)
+       :ref (fn [e]     ; Called when node created and destroyed only
               (when e
                 (reset! canvas-dom e)
                 (reset! monet-canvas (canvas/init @canvas-dom "2d"))
@@ -106,15 +155,12 @@
                                                   nil
                                                   (fn [ctx val]
                                                     (-> ctx
-                                                        (canvas/fill-style "#f00")
-                                                        (canvas/circle val)
-                                                        (canvas/fill)))))))}]
-     [:div.drawer.bg-aqua
-      [:h2 {:style {:margin-left "2rem" :height "2rem"}} "Files in checkpoint"]
-      [:div.file-menu
-       (let [files ["file1.psd" "file2.psd" "file3.png" "file4.jpg" "file5.png" "file6.jpg"]]
-         (for [f files]
-           [:div.file-item.col {:key f} f]))]]]))
+                                                        (canvas/stroke-width 2)
+                                                        (canvas/begin-path)
+                                                        (canvas/move-to 0 (/ (:height @window) 2))
+                                                        (canvas/line-to (/ (:width @window) 2) (/ (:height @window) 2))
+                                                        (canvas/stroke)))))))}]
+     [main]]))
 
 ;;
 ;; Init

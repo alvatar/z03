@@ -12,12 +12,26 @@
 ;; Database
 ;;
 
-(def db-schema {})
+(def db-schema {:user/name {:db.unique :db.unique/identity}})
 (def db-conn (d/create-conn db-schema))
 (p/posh! db-conn)
 
-(d/transact! db-conn
-             [{:user/name "Alvatar"}])
+;; Globals will use eid 1
+(p/transact! db-conn [[:db/add 1 :user/name "Alvatar"]])
+
+;; (def selected-revision
+;;   (p/q '[:find ?n .
+;;          :where [?e]
+;;          [?e :revision/id ?n]]
+;;        db-conn))
+
+;; (defn set-selected-revision [id]
+;;   (p/transact! db-conn [[:db/add 1 :revision/id id]]))
+
+;; (defn deselect-revision []
+;;   (when-let [e @selected-revision]
+;;     (p/transact! db-conn [[:db/retract 1 :revision/id e]])))
+
 
 ;;
 ;; UI
