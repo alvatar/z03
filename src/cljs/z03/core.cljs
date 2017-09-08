@@ -75,17 +75,13 @@
    [:.fill-parent {:width "100%" :height "100%"}]
    [:.lfloat {:float "left"}]
    [:.rfloat {:float "right"}]
+   [:.center {:text-align "center"}]
    ;; Colors
    [:.bg-aqua {:background-color "#7fdbff"}]
    ;; Animations
    drawer-animation-show
    drawer-animation-hide
    ;; Components
-   [:.header {:position "absolute" :left 0 :top 0
-              :margin {:left (u/rem 0.5) :top (u/rem 0.5)}
-              :font {:family ["Bitter" "sans-serif"]
-                     :weight 400
-                     :size (u/rem 0.7)}}]
    (let [drawer {:position "absolute" :top 0
                  :width "50%" :height "100%"}]
      [[:.drawer-show (merge drawer {:right 0
@@ -93,7 +89,32 @@
       [:.drawer-hide (merge drawer {:right (u/percent -50)
                                     :animation [[drawer-animation-hide "1.0s"]]})]])
    [:.file-menu]
-   [:.file-item {:padding "2rem 2rem 2rem 2rem"}]))
+   [:.file-item {:padding "0 2rem 2rem 2rem"}]
+   (let [files-top (u/px 280)
+         horizontal-container {:position "relative"
+                                :margin "0 auto"
+                                :width (u/px 900)}]
+     [[:.graph-section-container {:position "absolute"
+                                  :top 0 :left 0
+                                  :height files-top :width "100%"
+                                  :background-color "#ddd"}]
+      [:.graph-section-container-2 horizontal-container]
+      [:.files-section-container {:position "absolute"
+                                  :top files-top
+                                  :min-height (u/rem 40) :width "100%"
+                                  :background-color "#fff"}]
+      [:.files-section-container-2 horizontal-container]
+      [:.header-section-container {:position "absolute" :left 0 :top 0
+                                   :width "100%"
+                                   :font {:family ["Bitter" "sans-serif"]
+                                          :weight 400
+                                          :size (u/rem 0.7)}}]
+      [:.header-section-container-2 (merge horizontal-container
+                                           {:height (u/px 30)
+                                            :border {:style "solid"
+                                                     :width "0 0 1 0"}})]])
+   [:.header-text
+    [:h4 {:margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]))
 
 (defonce style-node (atom nil))
 (if @style-node
@@ -101,39 +122,30 @@
   (reset! style-node (goog.style/installStyles styles)))
 
 (defn header []
-  [:div.header
-   [:div.lfloat {:style {:margin-right "0.5rem"}}
-    [:i.fa.fa-undo {:aria-hidden "true"}]]
-   [:div.lfloat
-    @(p/q '[:find ?n .
-            :where [?e]
-            [?e :user/name ?n]]
-          db-conn)]])
+  [:div.header-section-container>div.header-section-container-2
+   
+   [:div.header-text
+    [:div.lfloat {:style {:margin-right "0.5rem"}}
+     [:h4 "Back"]
+     [:i.fa.fa-undo {:aria-hidden "true"}]]
+    [:h4.lfloat "Settings"]
+    [:h4.rfloat
+     @(p/q '[:find ?n .
+             :where [?e]
+             [?e :user/name ?n]]
+           db-conn)]]])
 
 (defonce ui-state
   {:selected-revision (r/atom nil)})
 
 (defn main []
   [:div
-   [:div.revisions
-    [:div.current-revision {:style {:position "absolute" :top "50%" :left "50%"
-                                    :margin-left "-30px" :margin-top "-40px"
-                                    :cursor "pointer"}
-                            :on-click #(reset! (:selected-revision ui-state) "main")}
-     [:div.lfloat {:style {:font-size "80px"}}
-      [:i.fa.fa-dot-circle-o {:aria-hidden "true"}]]]
-    [:div.revision {:style {:position "absolute" :top "50%" :left "30%"
-                            :margin-left "-25px" :margin-top "-25px"}}
-     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]
-    [:div.revision {:style {:position "absolute" :top "50%" :left "20%"
-                            :margin-left "-25px" :margin-top "-25px"}}
-     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]
-    [:div.revision {:style {:position "absolute" :top "50%" :left "5%"
-                            :margin-left "-25px" :margin-top "-25px"}}
-     [:div.lfloat {:style {:font-size "50px"}} [:i.fa.fa-circle {:aria-hidden "true"}]]]]
-   [(if @(:selected-revision ui-state) :div.drawer-show.bg-aqua :div.drawer-hide.bg-aqua)
+   [:div.graph-section-container>div.graph-section-container-2
+    [:div.center ;; TODO
+     [:img {:src "svg/graph-prototype.svg"}]]]
+   [:div.files-section-container>div.files-section-container-2
     [:h2 {:style {:margin-left "2rem" :height "2rem"}} "Files in checkpoint"]
-    [:div.file-menu
+    [:div.files-listing
      (let [files ["file1.psd" "file2.psd" "file3.png" "file4.jpg" "file5.png" "file6.jpg"]]
        (for [f files]
          [:div.file-item.col {:key f} f]))]]
