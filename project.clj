@@ -58,7 +58,7 @@
                 ;; Alternatively, you can configure a function to run every time figwheel reloads.
                 ;; :figwheel {:on-jsload "z03.core/on-figwheel-reload"}
                 :compiler {:main z03.core
-                           :asset-path "js/compiled/out"
+                           :asset-path "js/compiled/out/z03"
                            :output-to "resources/public/js/compiled/z03.js"
                            :output-dir "resources/public/js/compiled/out/z03"
                            :source-map-timestamp true}}
@@ -82,7 +82,7 @@
                 ;; Alternatively, you can configure a function to run every time figwheel reloads.
                 ;; :figwheel {:on-jsload "z03.core/on-figwheel-reload"}
                 :compiler {:main z03.core
-                           :asset-path "js/compiled/out"
+                           :asset-path "js/compiled/out/viewer"
                            :output-to "resources/public/js/compiled/viewer.js"
                            :output-dir "resources/public/js/compiled/out/viewer"
                            :source-map-timestamp true}}
