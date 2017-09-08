@@ -6,7 +6,7 @@
 (def common-css
   (css []))
 
-(def user-home
+(defn- html-template [js]
   (html
    [:html
     [:head
@@ -20,4 +20,10 @@
      [:link {:rel "stylesheet" :href "https://cdnjs.cloudflare.com/ajax/libs/gridlex/2.4.0/gridlex.min.css"}]]
     [:body
      [:div#app]
-     [:script {:src "js/compiled/z03.js" :type "text/javascript"}]]]))
+     [:script {:src js :type "text/javascript"}]]]))
+
+(def user-home
+  (html-template "js/compiled/z03.js"))
+
+(def viewer
+  (html-template "js/compiled/z03-viewer.js"))

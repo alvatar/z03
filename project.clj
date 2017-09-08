@@ -52,7 +52,7 @@
   :repl-options {:init-ns user}
 
   :cljsbuild {:builds
-              [{:id "dev"
+              [{:id "dev-z03"
                 :source-paths ["src/cljs" "src/cljc"]
                 :figwheel true
                 ;; Alternatively, you can configure a function to run every time figwheel reloads.
@@ -60,19 +60,38 @@
                 :compiler {:main z03.core
                            :asset-path "js/compiled/out"
                            :output-to "resources/public/js/compiled/z03.js"
-                           :output-dir "resources/public/js/compiled/out"
+                           :output-dir "resources/public/js/compiled/out/z03"
                            :source-map-timestamp true}}
-               {:id "test"
-                :source-paths ["src/cljs" "test/cljs" "src/cljc" "test/cljc"]
-                :compiler {:output-to "resources/public/js/compiled/testable.js"
-                           :main z03.test-runner
-                           :optimizations :none}}
-               {:id "min"
+               {:id "min-z03"
                 :source-paths ["src/cljs" "src/cljc"]
                 :jar true
                 :compiler {:main z03.core
                            :output-to "resources/public/js/compiled/z03.js"
-                           :output-dir "target"
+                           :output-dir "target/z03"
+                           :source-map-timestamp true
+                           :optimizations :advanced
+                           :pretty-print false}}
+               ;; {:id "test"
+               ;;  :source-paths ["src/cljs" "test/cljs" "src/cljc" "test/cljc"]
+               ;;  :compiler {:output-to "resources/public/js/compiled/testable.js"
+               ;;             :main z03.test-runner
+               ;;             :optimizations :none}}
+               {:id "dev-viewer"
+                :source-paths ["src/cljs" "src/cljc"]
+                :figwheel true
+                ;; Alternatively, you can configure a function to run every time figwheel reloads.
+                ;; :figwheel {:on-jsload "z03.core/on-figwheel-reload"}
+                :compiler {:main z03.core
+                           :asset-path "js/compiled/out"
+                           :output-to "resources/public/js/compiled/viewer.js"
+                           :output-dir "resources/public/js/compiled/out/viewer"
+                           :source-map-timestamp true}}
+               {:id "min-viewer"
+                :source-paths ["src/cljs" "src/cljc"]
+                :jar true
+                :compiler {:main z03.core
+                           :output-to "resources/public/js/compiled/viewer.js"
+                           :output-dir "target/viewer"
                            :source-map-timestamp true
                            :optimizations :advanced
                            :pretty-print false}}]}

@@ -17,8 +17,8 @@
     (println "Starting less.")
     (clojure.java.shell/sh "lein" "less" "auto")))
 
-(defn run []
-  (figwheel/start-figwheel!)
+(defn run [sub-project]
+  (figwheel/start-figwheel! (str "dev-" (name sub-project)))
   (start-less)
   (z03.server/stop!)
   (z03.server/start!)
