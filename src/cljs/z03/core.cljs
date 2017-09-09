@@ -76,6 +76,7 @@
    [:.lfloat {:float "left"}]
    [:.rfloat {:float "right"}]
    [:.center {:text-align "center"}]
+   [:.nomargin {:margin 0 :padding 0}]
    ;; Colors
    [:.bg-aqua {:background-color "#7fdbff"}]
    ;; Animations
@@ -89,7 +90,7 @@
       [:.drawer-hide (merge drawer {:right (u/percent -50)
                                     :animation [[drawer-animation-hide "1.0s"]]})]])
    [:.file-menu]
-   [:.file-item {:padding "0 2rem 2rem 2rem"}]
+   [:.file-item {:padding "0 2rem 1rem 2rem"}]
    (let [files-top (u/px 280)
          horizontal-container {:position "relative"
                                 :margin "0 auto"
@@ -111,8 +112,7 @@
                                           :size (u/rem 0.7)}}]
       [:.header-section-container-2 (merge horizontal-container
                                            {:height (u/px 30)
-                                            :border {:style "solid"
-                                                     :width "0 0 1 0"}})]])
+                                            :border {:style "solid" :width "0 0 1 0"}})]])
    [:.header-text
     [:h4 {:margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]))
 
@@ -126,8 +126,8 @@
    
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
-     [:h4 "Back"]
-     [:i.fa.fa-undo {:aria-hidden "true"}]]
+     ;[:i.fa.fa-undo {:aria-hidden "true"}]
+     [:h4 "Back"]]
     [:h4.lfloat "Settings"]
     [:h4.rfloat
      @(p/q '[:find ?n .
@@ -139,17 +139,53 @@
   {:selected-revision (r/atom nil)})
 
 (defn main []
-  [:div
-   [:div.graph-section-container>div.graph-section-container-2
-    [:div.center ;; TODO
-     [:img {:src "svg/graph-prototype.svg"}]]]
-   [:div.files-section-container>div.files-section-container-2
-    [:h2 {:style {:margin-left "2rem" :height "2rem"}} "Files in checkpoint"]
-    [:div.files-listing
-     (let [files ["file1.psd" "file2.psd" "file3.png" "file4.jpg" "file5.png" "file6.jpg"]]
-       (for [f files]
-         [:div.file-item.col {:key f} f]))]]
-   [header]])
+  (let [master-files [{:file "logo.psd" :last-commit "[master] Branding v1"}
+                      {:file "file1.psd" :last-commit "Simplified logo; reduced number of colors"}
+                      {:file "file2.psd" :last-commit "[master] Branding v1"}
+                      {:file "file3.png" :last-commit "[master] Branding v1"}
+                      {:file "file4.jpg" :last-commit "[master] Branding v1"}
+                      {:file "file5.png" :last-commit "[master] Branding v1"}
+                      {:file "file6.jpg" :last-commit "[master] Branding v1"}]
+        head1-files [{:file "logo.psd" :last-commit "Simplified logo; reduced number of colors"}
+                     {:file "file1.psd" :last-commit "General structure for branding"}]
+        revision-id (r/atom "[master] Branding v1")
+        revision-files (r/atom master-files)
+        hover-revision (r/atom false)]
+    (fn []
+      [:div
+       [:div.graph-section-container>div.graph-section-container-2
+        [:div.center
+         [:object {:type "image/svg+xml" :data "svg/graph-prototype.svg"}
+          "Your browser does not support SVG"]
+         [:div {:style {:position "absolute" :top 0 :left 0}}
+          [:svg {:width 750 :height 280}
+           [:circle {:cx 699 :cy 186
+                     :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
+                     :cursor "pointer"
+                     :on-click (fn []
+                                 (reset! revision-id "[master] Branding v1")
+                                 (reset! revision-files master-files))}]
+           [:circle {:cx 646.5 :cy 186
+                     :r 9 :style {:fill "#888"}
+                     :cursor "pointer"
+                     :on-mouse-over #(reset! hover-revision true)
+                     :on-mouse-out #(reset! hover-revision false)
+                     :on-click (fn []
+                                 (reset! revision-id "Simplified logo; reduced number of colors")
+                                 (reset! revision-files head1-files))}]
+           (when @hover-revision
+             [:g
+              [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
+              [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
+       [:div.files-section-container>div.files-section-container-2
+        [:h2 {:style {:margin-left "2rem" :height "2.5rem"}} (str @revision-id)]
+        [:div.files-listing
+         (let [files @revision-files]
+           (for [{:keys [file last-commit]} @revision-files]
+             [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+              [:div.file-item.col-3 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7" :cursor "pointer"}} file]]
+              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]]))]]
+       [header]])))
 
 (defn app []
   (let [canvas-dom (atom nil)
