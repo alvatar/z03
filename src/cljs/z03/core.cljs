@@ -69,9 +69,12 @@
    [:body :h1 :h2 :h3 :h4 :h5 :h6 :p
     {:font-family ["Oswald" "sans-serif"]
      :font-weight 200
-     :overflow-x "hidden"}]
+     :overflow-x "hidden"
+     :line-height "1.2rem"}
+    [:h1 {}]]
    [:h1 :h2 {:font-family ["Bitter" "sans-serif"]
-             :font-weight 700}]
+             :font-weight 700
+             :line-height (u/rem 2.2)}]
    [:.fill-parent {:width "100%" :height "100%"}]
    [:.lfloat {:float "left"}]
    [:.rfloat {:float "right"}]
@@ -114,7 +117,8 @@
                                            {:height (u/px 30)
                                             :border {:style "solid" :width "0 0 1 0"}})]])
    [:.header-text
-    [:h4 {:margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]))
+    [:h4 {:margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
+   [:revision-description {:margin-left "2rem" :height "2.5rem"}]))
 
 (defonce style-node (atom nil))
 (if @style-node
@@ -135,22 +139,26 @@
              [?e :user/name ?n]]
            db-conn)]]])
 
+(def revisions
+  {:master {:description "[master] Branding v1"
+            :tags ["branding" "logo" "milestone"]
+            :files [{:file "logo.psd" :last-commit "[master] Branding v1"}
+                    {:file "file1.psd" :last-commit "Simplified logo; reduced number of colors"}
+                    {:file "file2.psd" :last-commit "[master] Branding v1"}
+                    {:file "file3.png" :last-commit "[master] Branding v1"}
+                    {:file "file4.jpg" :last-commit "[master] Branding v1"}
+                    {:file "file5.png" :last-commit "[master] Branding v1"}
+                    {:file "file6.jpg" :last-commit "[master] Branding v1"}]}
+   :head1 {:description "Simplified logo; reduced number of colors"
+           :tags ["logo" "tweak"]
+           :files [{:file "logo.psd" :last-commit "Simplified logo; reduced number of colors"}
+                   {:file "file1.psd" :last-commit "General structure for branding"}]}})
+
 (defonce ui-state
-  {:selected-revision (r/atom nil)})
+  {:selected-revision (r/atom (:master revisions))})
 
 (defn main []
-  (let [master-files [{:file "logo.psd" :last-commit "[master] Branding v1"}
-                      {:file "file1.psd" :last-commit "Simplified logo; reduced number of colors"}
-                      {:file "file2.psd" :last-commit "[master] Branding v1"}
-                      {:file "file3.png" :last-commit "[master] Branding v1"}
-                      {:file "file4.jpg" :last-commit "[master] Branding v1"}
-                      {:file "file5.png" :last-commit "[master] Branding v1"}
-                      {:file "file6.jpg" :last-commit "[master] Branding v1"}]
-        head1-files [{:file "logo.psd" :last-commit "Simplified logo; reduced number of colors"}
-                     {:file "file1.psd" :last-commit "General structure for branding"}]
-        revision-id (r/atom "[master] Branding v1")
-        revision-files (r/atom master-files)
-        hover-revision (r/atom false)]
+  (let [hover-revision (r/atom false)]
     (fn []
       [:div
        [:div.graph-section-container>div.graph-section-container-2
@@ -162,52 +170,32 @@
            [:circle {:cx 699 :cy 186
                      :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
                      :cursor "pointer"
-                     :on-click (fn []
-                                 (reset! revision-id "[master] Branding v1")
-                                 (reset! revision-files master-files))}]
+                     :on-click #(reset! (:selected-revision ui-state) (:master revisions))}]
            [:circle {:cx 646.5 :cy 186
                      :r 9 :style {:fill "#888"}
                      :cursor "pointer"
                      :on-mouse-over #(reset! hover-revision true)
                      :on-mouse-out #(reset! hover-revision false)
-                     :on-click (fn []
-                                 (reset! revision-id "Simplified logo; reduced number of colors")
-                                 (reset! revision-files head1-files))}]
+                     :on-click #(reset! (:selected-revision ui-state) (:head1 revisions))}]
            (when @hover-revision
              [:g
               [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
               [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
-       [:div.files-section-container>div.files-section-container-2
-        [:h2 {:style {:margin-left "2rem" :height "2.5rem"}} (str @revision-id)]
-        [:div.files-listing
-         (let [files @revision-files]
-           (for [{:keys [file last-commit]} @revision-files]
+       (let [selected-revision @(:selected-revision ui-state)]
+         [:div.files-section-container>div.files-section-container-2
+          [:h2.revision-description (:description selected-revision)]
+          [:h5.revision-description "Tags: " (clojure.string/join ", " (:tags selected-revision))]
+          [:div.files-listing
+           (for [{:keys [file last-commit]} (:files selected-revision)]
              [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
               [:div.file-item.col-3 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7" :cursor "pointer"}} file]]
-              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]]))]]
+              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]])]])
        [header]])))
 
 (defn app []
   (let [canvas-dom (atom nil)
         monet-canvas (atom nil)]
     [:div.container
-     [:canvas
-      {:width (:width @window) :height (:height @window)
-       :on-click #(reset! (:selected-revision ui-state) nil)
-       :ref (fn [e]     ; Called when node created and destroyed only
-              (when e
-                (reset! canvas-dom e)
-                (reset! monet-canvas (canvas/init @canvas-dom "2d"))
-                (canvas/add-entity @monet-canvas :background
-                                   (canvas/entity {:x (/ (:width @window) 2) :y (/ (:height @window) 2) :r 20}
-                                                  nil
-                                                  (fn [ctx val]
-                                                    (-> ctx
-                                                        (canvas/stroke-width 2)
-                                                        (canvas/begin-path)
-                                                        (canvas/move-to 0 (/ (:height @window) 2))
-                                                        (canvas/line-to (/ (:width @window) 2) (/ (:height @window) 2))
-                                                        (canvas/stroke)))))))}]
      [main]]))
 
 ;;
