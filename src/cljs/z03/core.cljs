@@ -31,6 +31,20 @@
 ;; State
 ;;
 
+(def projects
+  [{:id "rick-interstellar-enterprises-branding"
+    :description "Rick Interstellar Enterprises: branding"
+    :commits ["[master] Branding v1" "Simplified logo; reduced number of colors"]}
+   {:id "adventure-time-branding"
+    :description "Adventure Time: Branding"
+    :commits ["[master] Final version" "Modifications from developer meeting" "Changed specifications for printing" "New layout for letter" "Complete change of palette"]}
+   {:id "futurama-web-design"
+    :description "Futurama: Web Design"
+    :commits ["[master] Final version" "Mockup v4" "Mockup v3" "Mockup v2" "Mockup v1"]}
+   {:id "portfolio-web"
+    :description "Personal Portfolio: Web"
+    :commits ["[master] Add Adventure Time" "Add Futurama Web Design" "I like this version" "Simplify and clean up design" "All the things in place"]}])
+
 (def revisions
   {:master {:description "[master] Branding v1"
             :tags ["branding" "logo" "milestone"]
@@ -94,16 +108,20 @@
      :font-weight 200
      :overflow-x "hidden"
      :line-height "1.2rem"}]
-   [:h1 :h2 {:font-family ["Bitter" "sans-serif"]
-             :font-weight 700}]
+   [:h1 :h2 :h3 {:font-family ["Bitter" "sans-serif"]
+                 :font-weight 700}]
    [:h1 {:line-height (u/rem 2.8)}]
    [:h2 {:line-height (u/rem 2.2)}]
+   [:h3 {:line-height (u/rem 2.0)}]
+   [:h4 {:line-height (u/rem 1.8)}]
+   [:h5 {:line-height (u/rem 1.6)}]
    [:.fill-parent {:width "100%" :height "100%"}]
    [:.lfloat {:float "left"}]
    [:.rfloat {:float "right"}]
    [:.center {:text-align "center"}]
    [:.nomargin {:margin 0 :padding 0}]
    [:.clickable {:cursor "pointer"}]
+   [:.divider {:border {:style "solid" :width "0 0 1 0"}}]
    ;; Colors
    [:.bg-aqua {:background-color "#7fdbff"}]
    ;; Animations
@@ -121,20 +139,24 @@
    [:.container {:position "relative"
                  :margin "0 auto"
                  :width (u/px 900)}]
-   (let [files-top (u/px 280)]
-     [[:.section-container {:position "absolute"
-                            :top 0 :left 0
-                            :height files-top :width "100%"
-                            :background-color "#ddd"}]
-      [:.header-container {:position "absolute" :left 0 :top 0
-                           :width "100%" :height (u/px 30)
-                           :border {:style "solid" :width "0 0 1 0"}
-                           :font {:family ["Bitter" "sans-serif"]
-                                  :weight 400
-                                  :size (u/rem 0.7)}}]])
+   [:.section-container {:position "absolute"
+                         :top 0 :left 0
+                         :height (u/px 280) :width "100%"}]
+   [:.header-container {:position "absolute" :left 0 :top 0
+                        :width "100%" :height (u/px 30)
+                        :border {:style "solid" :width "0 0 1 0"}
+                        :font {:family ["Bitter" "sans-serif"]
+                               :weight 400
+                               :size (u/rem 0.7)}}]
    [:.header-text
-    [:h4 {:margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
-   [:revision-description {:margin-left "2rem" :height "2.5rem"}]))
+    [:h4 {:line-height (u/rem 0.8) :margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
+   [:.project-list {:margin {:top (u/rem 3) :bottom (u/rem 10)}}
+    [:.item {:position "relative"
+             :height (u/rem 10)
+             :padding (u/rem 1)
+             :border {:style "solid" :width "0 0 1 0"}}
+     [:&:hover {:background {:color "#eee"}}]
+     [:&:first-child {:border {:style "solid" :width "1 0 1 0"}}]]]))
 
 (defonce style-node (atom nil))
 (if @style-node
@@ -153,7 +175,16 @@
 
 (defn home-ui []
   [:div.section-container
-   [:h1.clickable {:on-click #(reset! (:active-project ui-state) "Example")} "Hello"]
+   ;; [:h2 {:style {:margin-top "5rem"}} "Projects"]
+   [:div.project-list
+    (for [{:keys [id description commits]} projects]
+      [:div.item.clickable {:on-click #(reset! (:active-project ui-state) id)}
+       [:div {:style {:width "50%" :background-color "50%"}}
+        [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} id]
+        [:h4 {:style {:margin-top "10px"}} description]]
+       [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
+        (for [c (take 5 commits)]
+          [:h6 {:style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
    [home-ui-header]])
 
 (defn project-ui-header []
@@ -173,7 +204,7 @@
   (let [hover-revision (r/atom false)]
     (fn []
       [:div.section-container
-       [:div
+       [:div {:style {:height "280px"}}
         [:div.center
          [:object {:type "image/svg+xml" :data "svg/graph-prototype.svg"}
           "Your browser does not support SVG"]
@@ -195,8 +226,8 @@
               [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
        (let [active-revision @(:active-revision ui-state)]
          [:div
-          [:h2.revision-description (:description active-revision)]
-          [:h5.revision-description "Tags: " (clojure.string/join ", " (:tags active-revision))]
+          [:h2 (:description active-revision)]
+          [:h5 "Tags: " (clojure.string/join ", " (:tags active-revision))]
           [:div.files-listing
            (for [{:keys [file last-commit]} (:files active-revision)]
              [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
