@@ -18,6 +18,7 @@
                  [com.taoensso/encore "2.92.0"]
                  [com.taoensso/sente "1.11.0"]
                  [com.taoensso/timbre "4.10.0"]
+                 [pointslope/remit "0.1.0-SNAPSHOT"]
                  ;; Database
                  [org.clojure/java.jdbc "0.7.1"]
                  [org.postgresql/postgresql "42.1.4"]

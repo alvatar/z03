@@ -14,6 +14,14 @@
    [garden.units :as u]
    [garden.stylesheet :as stylesheet]
    [garden.color :as color :refer [hsl rgb]]
+   [goog.string :as gstring]
+   [goog.math :as gmath]
+   [goog.math.Rect]
+   [goog.events]
+   [goog.events.EventType]
+   [goog.events.MouseWheelHandler]
+   [goog.fx :as fx]
+   [goog.fx.Dragger.EventType]
    ;; -----
    [z03.globals :as globals :refer [db-conn display-type window]]
    [z03.utils :as utils :refer [log*]]
@@ -32,7 +40,10 @@
 ;;
 
 (def projects
-  [{:id "rick-interstellar-enterprises-branding"
+  [{:id "google-animations"
+    :description "Showcase Google animations"
+    :commits ["[master] First version"]}
+   {:id "rick-interstellar-enterprises-branding"
     :description "Rick Interstellar Enterprises: branding"
     :commits ["[master] Branding v1" "Simplified logo; reduced number of colors"]}
    {:id "adventure-time-branding"
@@ -161,7 +172,13 @@
              :padding (u/rem 1)
              :border {:style "solid" :width "0 0 1 0"}}
      [:&:hover {:background {:color "#eee"}}]
-     [:&:first-child {:border {:style "solid" :width "1 0 1 0"}}]]]))
+     [:&:first-child {:border {:style "solid" :width "1 0 1 0"}}]]]
+   [:.editor-container {:position "fixed"
+                        :top 0 :left 0
+                        :height "100%" :width "100%"
+                        :background "url(img/editor-bg.png) top left repeat"
+                        :background-attachment "fixed"
+                        :background-position "top left"}]))
 
 (defonce style-node (atom nil))
 (if @style-node
@@ -183,7 +200,7 @@
    ;; [:h2 {:style {:margin-top "5rem"}} "Projects"]
    [:div.project-list
     (for [{:keys [id description commits]} projects]
-      [:div.item.clickable {:on-click #(reset! (:active-project ui-state) id)}
+      [:div.item.clickable {:key id :on-click #(reset! (:active-project ui-state) id)}
        [:div {:style {:width "50%" :background-color "50%"}}
         [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} id]
         [:h4 {:style {:margin-top "10px"}} description]]
@@ -247,11 +264,51 @@
   [:div.header-container
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
-     ;[:i.fa.fa-undo {:aria-hidden "true"}]
-     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]]])
+     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]
+    [:div.rfloat {:style {:margin-left "0.5rem"}}
+     [:h4.clickable {:on-click #(js/alert "TODO")} "Add Annotation"]]]])
+
+(def editable
+  (let [image-scale (r/atom 1)
+        image-x (r/atom 0)
+        image-y (r/atom 0)]
+    (with-meta
+      (fn []
+        [:div {:style {:position "absolute"}}
+         [:img {:style {:transform (gstring/format "scale(%s)" @image-scale)}
+                :src "img/google_motion_system.gif"}]])
+      {:component-did-mount
+       (fn [this]
+         (let [node (r/dom-node this)]
+           (goog.events/listen (goog.events.MouseWheelHandler. node)
+                               goog.events.MouseWheelHandler.EventType.MOUSEWHEEL
+                               (fn [e] (swap! image-scale #(+ % (* 0.001 (.-deltaY e))))))
+           (goog.events/listen node
+                               goog.events.EventType/MOUSEDOWN
+                               (fn [e]
+                                 (let [drag (fx/Dragger. node)
+                                       local-state (r/state this)]
+                                   (.setLimits drag (goog.math.Rect. 0 0 400 400))
+                                   #_(.addEventListener drag
+                                                      goog.fx.Dragger.EventType/DRAG
+                                                      (fn [d])
+                                                      #_(fn [d]
+                                                        (let [dx (-> d .-dragger .-deltaX)
+                                                              dy (-> d .-dragger .-deltaY)]
+                                                          (log* (str "x: " dx " y: " dy))
+                                                          (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
+                                                          (swap! image-y (fn [y] (gmath/clamp dy 0 y)))
+                                                          )))
+                                   (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
+                                   (.startDrag drag e))))))})))
+
+(defn file-viewer []
+  [:div.editor-container
+   [editable]])
 
 (defn file-ui []
-  [:div {:on-click #(reset! (:active-file ui-state) nil)}
+  [:div
+   [file-viewer]
    [file-ui-header]])
 
 (defn app []
