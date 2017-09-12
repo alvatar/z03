@@ -62,7 +62,8 @@
 
 (defonce ui-state
   {:active-project (r/atom "Example")
-   :active-revision (r/atom (:master revisions))})
+   :active-revision (r/atom (:master revisions))
+   :active-file (r/atom nil)})
 
 ;;
 ;; Event Handlers
@@ -114,6 +115,10 @@
    [:h2 {:line-height (u/rem 2.2)}]
    [:h3 {:line-height (u/rem 2.0)}]
    [:h4 {:line-height (u/rem 1.8)}]
+   [:h4.link {:overflow-y "hidden"
+              :cursor "pointer"
+              :line-height (u/rem 1.5)
+              :border {:style "solid" :width "0 0 1 0"}}]
    [:h5 {:line-height (u/rem 1.6)}]
    [:.fill-parent {:width "100%" :height "100%"}]
    [:.lfloat {:float "left"}]
@@ -150,7 +155,7 @@
                                :size (u/rem 0.7)}}]
    [:.header-text
     [:h4 {:line-height (u/rem 0.8) :margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
-   [:.project-list {:margin {:top (u/rem 3) :bottom (u/rem 10)}}
+   [:.project-list {:margin {:top (u/px 33) :bottom (u/rem 10)}}
     [:.item {:position "relative"
              :height (u/rem 10)
              :padding (u/rem 1)
@@ -227,20 +232,38 @@
        (let [active-revision @(:active-revision ui-state)]
          [:div
           [:h2 (:description active-revision)]
-          [:h5 "Tags: " (clojure.string/join ", " (:tags active-revision))]
+          [:div.grid
+           [:div.col-10>h5 "Tags: " (clojure.string/join ", " (:tags active-revision))]
+           [:div.col-2>h4.rfloat.link "get presentation link"]]
           [:div.files-listing
            (for [{:keys [file last-commit]} (:files active-revision)]
              [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-              [:div.file-item.col-3 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7" :cursor "pointer"}} file]]
+              [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) file)}
+               [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} file]]
               [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]])]])
        [project-ui-header]])))
+
+(defn file-ui-header []
+  [:div.header-container
+   [:div.header-text
+    [:div.lfloat {:style {:margin-right "0.5rem"}}
+     ;[:i.fa.fa-undo {:aria-hidden "true"}]
+     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]]])
+
+(defn file-ui []
+  [:div {:on-click #(reset! (:active-file ui-state) nil)}
+   [file-ui-header]])
 
 (defn app []
   (let [canvas-dom (atom nil)
         monet-canvas (atom nil)]
     [:div.container
-     (if @(:active-project ui-state)
+     (cond
+       @(:active-file ui-state)
+       [file-ui]
+       @(:active-project ui-state)
        [project-ui]
+       :else
        [home-ui])]))
 
 ;;
