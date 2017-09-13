@@ -20,6 +20,8 @@
    [goog.events]
    [goog.events.EventType]
    [goog.events.MouseWheelHandler]
+   [goog.events.KeyCodes]
+   [goog.events.KeyHandler]
    [goog.fx :as fx]
    [goog.fx.Dragger.EventType]
    ;; -----
@@ -197,7 +199,6 @@
 
 (defn home-ui []
   [:div.section-container
-   ;; [:h2 {:style {:margin-top "5rem"}} "Projects"]
    [:div.project-list
     (for [{:keys [id description commits]} projects]
       [:div.item.clickable {:key id :on-click #(reset! (:active-project ui-state) id)}
@@ -264,43 +265,62 @@
   [:div.header-container
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
-     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]
-    [:div.rfloat {:style {:margin-left "0.5rem"}}
-     [:h4.clickable {:on-click #(js/alert "TODO")} "Add Annotation"]]]])
+     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]]])
+
+(defonce file-annotations (r/atom []))
 
 (def editable
   (let [image-scale (r/atom 1)
         image-x (r/atom 0)
-        image-y (r/atom 0)]
+        image-y (r/atom 0)
+        space-down (r/atom false)
+        key-down-listener #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! space-down true))
+        key-up-listener #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! space-down false))]
     (with-meta
       (fn []
-        [:div {:style {:position "absolute"}}
-         [:img {:style {:transform (gstring/format "scale(%s)" @image-scale)}
-                :src "img/google_motion_system.gif"}]])
+        [:div {:style {:position "relative" :width "100%" :height "100%"}}
+         [:div {:style {:position "absolute" :top 0 :left 0}}
+          [:img {:style {:transform (gstring/format "scale(%s)" @image-scale)}
+                 :src "img/google_motion_system.gif"}]
+          [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
+           [:svg {:width "100%" :height "100%"
+                  :style {:transform (gstring/format "scale(%s)" @image-scale)}}
+            (for [{:keys [id x y]} @file-annotations]
+              [:circle {:cx x :cy y
+                        :r 10 :style {:fill "#f7a032" :stroke "rgba(255, 124, 43, 0.3)" :stroke-width "3px"}
+                        :cursor "pointer"}])]]]])
       {:component-did-mount
        (fn [this]
          (let [node (r/dom-node this)]
+           (goog.events/listen js/document goog.events.EventType.KEYDOWN key-down-listener)
+           (goog.events/listen js/document goog.events.EventType.KEYUP key-up-listener)
            (goog.events/listen (goog.events.MouseWheelHandler. node)
                                goog.events.MouseWheelHandler.EventType.MOUSEWHEEL
-                               (fn [e] (swap! image-scale #(+ % (* 0.001 (.-deltaY e))))))
+                               (fn [e] (swap! image-scale #(gmath/clamp (+ % (* 0.001 (.-deltaY e))) 1.0 4.0))))
            (goog.events/listen node
                                goog.events.EventType/MOUSEDOWN
                                (fn [e]
-                                 (let [drag (fx/Dragger. node)
-                                       local-state (r/state this)]
-                                   (.setLimits drag (goog.math.Rect. 0 0 400 400))
-                                   #_(.addEventListener drag
-                                                      goog.fx.Dragger.EventType/DRAG
-                                                      (fn [d])
-                                                      #_(fn [d]
-                                                        (let [dx (-> d .-dragger .-deltaX)
-                                                              dy (-> d .-dragger .-deltaY)]
-                                                          (log* (str "x: " dx " y: " dy))
-                                                          (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
-                                                          (swap! image-y (fn [y] (gmath/clamp dy 0 y)))
-                                                          )))
-                                   (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
-                                   (.startDrag drag e))))))})))
+                                 (if @space-down
+                                   (let [drag (fx/Dragger. node)
+                                         local-state (r/state this)]
+                                     (.setLimits drag (goog.math.Rect. 0 0 400 400))
+                                     #_(.addEventListener drag
+                                                          goog.fx.Dragger.EventType/DRAG
+                                                          (fn [d]
+                                                              (let [dx (-> d .-dragger .-deltaX)
+                                                                    dy (-> d .-dragger .-deltaY)]
+                                                                (log* (str "x: " dx " y: " dy))
+                                                                (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
+                                                                (swap! image-y (fn [y] (gmath/clamp dy 0 y))))))
+                                     (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
+                                     (.startDrag drag e))
+                                   (swap! file-annotations conj {:x (.-offsetX e)
+                                                                 :y (.-offsetY e)
+                                                                 :id (rand-int 99999999)}))))))
+       :component-will-unmount
+       (fn [this]
+         (goog.events/unlisten js/document goog.events.EventType.KEYUP key-up-listener)
+         (goog.events/unlisten js/document goog.events.EventType.KEYDOWN key-down-listener))})))
 
 (defn file-viewer []
   [:div.editor-container
