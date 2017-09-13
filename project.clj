@@ -77,22 +77,22 @@
                ;;  :compiler {:output-to "resources/public/js/compiled/testable.js"
                ;;             :main z03.test-runner
                ;;             :optimizations :none}}
-               {:id "dev-viewer"
+               {:id "dev-presenter"
                 :source-paths ["src/cljs" "src/cljc"]
                 :figwheel true
                 ;; Alternatively, you can configure a function to run every time figwheel reloads.
                 ;; :figwheel {:on-jsload "z03.core/on-figwheel-reload"}
-                :compiler {:main z03.core
-                           :asset-path "js/compiled/out/viewer"
-                           :output-to "resources/public/js/compiled/viewer.js"
-                           :output-dir "resources/public/js/compiled/out/viewer"
+                :compiler {:main z03.presenter
+                           :asset-path "js/compiled/out/presenter"
+                           :output-to "resources/public/js/compiled/z03-presenter.js"
+                           :output-dir "resources/public/js/compiled/out/presenter"
                            :source-map-timestamp true}}
-               {:id "min-viewer"
+               {:id "min-presenter"
                 :source-paths ["src/cljs" "src/cljc"]
                 :jar true
-                :compiler {:main z03.core
-                           :output-to "resources/public/js/compiled/viewer.js"
-                           :output-dir "target/viewer"
+                :compiler {:main z03.presenter
+                           :output-to "resources/public/js/compiled/z03-presenter.js"
+                           :output-dir "target/presenter"
                            :source-map-timestamp true
                            :optimizations :advanced
                            :pretty-print false}}]}
@@ -146,7 +146,7 @@
               :env {:env "test"}}
              :uberjar
              {:source-paths ^:replace ["src/clj" "src/cljc"]
-              :prep-tasks ["compile" ["cljsbuild" "once" "min"]]
+              :prep-tasks ["compile" ["cljsbuild" "once" "min-z03" "min-presenter"]]
               :omit-source true
               :aot :all
               :env {:env "uberjar"}}})

@@ -39,17 +39,14 @@
   (def chsk-send! send-fn) ; ChannelSocket's send API fn
   (def connected-uids connected-uids))
 
-(defn user-home [req]
-  (-> (response html/user-home)
-      (content-type "text/html; charset=utf-8")))
-
-(defn viewer [req]
-  (-> (response html/viewer)
-      (content-type "text/html; charset=utf-8")))
+(defn serve-page [page]
+  (fn [req]
+    (-> (response page)
+        (content-type "text/html; charset=utf-8"))))
 
 (defroutes app
-  (GET "/" req user-home)
-  (GET "/view" req viewer)
+  (GET "/" req (serve-page html/home))
+  (GET "/view" req (serve-page html/presenter))
   (resources "/")
   ;; Sente
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))

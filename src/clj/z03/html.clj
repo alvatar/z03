@@ -22,8 +22,8 @@
      [:div#app]
      [:script {:src js :type "text/javascript"}]]]))
 
-(def user-home
+(def home
   (html-template "js/compiled/z03.js"))
 
-(def viewer
-  (html-template "js/compiled/z03-viewer.js"))
+(def presenter
+  (html-template "js/compiled/z03-presenter.js"))
