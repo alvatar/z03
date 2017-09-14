@@ -57,7 +57,7 @@
    ;; Animations
    drawer-animation-show
    drawer-animation-hide
-   ;; Components
+   ;; Project UI
    (let [drawer {:position "absolute" :top 0
                  :width "50%" :height "100%"}]
      [[:.drawer-show (merge drawer {:right 0
@@ -92,7 +92,21 @@
                         :height "100%" :width "100%"
                         :background "url(img/editor-bg.png) top left repeat"
                         :background-attachment "fixed"
-                        :background-position "top left"}]))
+                        :background-position "top left"}]
+   ;; Presenter UI
+   [:.presenter-container
+    [:.file-list {:position "absolute" :top (u/rem 4)}]
+    [:.file-item-container {:position "relative"
+                            :height (u/px 300) :width (u/px 300)}]
+    (let [margin 15]
+      [:.file-item {:position "absolute"
+                    :top (u/px margin) :left (u/px margin) :bottom (u/px margin) :right (u/px margin)
+                    :border {:style "solid" :color "#999"}}])
+    [:.file-thumbnail {:position "absolute"
+                       :top 0 :left 0
+                       :height (u/percent 100) :width (u/percent 100)
+                       :filter "opacity(60%) sepia(100%)"}
+     [:&:hover {:filter "opacity(100%)"}]]]))
 
 (defonce style-node (atom nil))
 (if @style-node

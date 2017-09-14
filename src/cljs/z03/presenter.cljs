@@ -16,7 +16,8 @@
    [goog.string :as gstring]
    ;; -----
    [z03.style]
-   [z03.globals :as globals :refer [db-conn display-type window]]
+   [z03.viewer :refer [file-ui]]
+   [z03.globals :as globals :refer [db-conn display-type window ui-state]]
    [z03.utils :as utils :refer [log*]]
    [z03.client :as client])
   (:require-macros
@@ -27,27 +28,6 @@
 
 (enable-console-print!)
 (timbre/set-level! :debug)
-
-;;
-;; State
-;;
-
-(def revisions
-  {:master {:description "[master] Branding v1"
-            :tags ["branding" "logo" "milestone"]
-            :files [{:file "logo.psd" :last-commit "[master] Branding v1"}
-                    {:file "file1.psd" :last-commit "Simplified logo; reduced number of colors"}
-                    {:file "file2.psd" :last-commit "[master] Branding v1"}
-                    {:file "file3.png" :last-commit "[master] Branding v1"}
-                    {:file "file4.jpg" :last-commit "[master] Branding v1"}
-                    {:file "file5.png" :last-commit "[master] Branding v1"}
-                    {:file "file6.jpg" :last-commit "[master] Branding v1"}]}
-   :head1 {:description "Simplified logo; reduced number of colors"
-           :tags ["logo" "tweak"]
-           :files [{:file "logo.psd" :last-commit "Simplified logo; reduced number of colors"}
-                   {:file "file1.psd" :last-commit "General structure for branding"}]}})
-
-(defonce ui-state {})
 
 ;;
 ;; Event Handlers
@@ -74,21 +54,58 @@
 ;; UI Components
 ;;
 
-(defn home-ui-header []
+(defn ui-header []
   [:div.header-container
    [:div.header-text
     [:h4.lfloat "iOS7 templates"]
     [:h4.rfloat "Design by Multiverse Visual Adventures Ltd."]]])
 
-(defn home-ui []
-  [:div.section-container
-   [home-ui-header]])
+(def files [{:file "file1.psd"
+             :thumbnail "img/template_ios7.png"
+             :offset-x 0
+             :offset-y 0}
+            {:file "file2.psd"
+             :thumbnail "img/template_ios7.png"
+             :offset-x 50
+             :offset-y 500}
+            {:file "file3.psd"
+             :thumbnail "img/template_ios7.png"
+             :offset-x 700
+             :offset-y 400}
+            {:file "file4.psd"
+             :thumbnail "img/template_ios7.png"
+             :offset-x 200
+             :offset-y 400}])
+
+(defn presenter-ui []
+  [:div.presenter-container
+   [:div.file-list.grid-3
+    (for [{:keys [file thumbnail offset-x offset-y]} (cons {:h "s"} files)]
+      [:div.file-item-container.col {:key file}
+       [:div.file-item.clickable
+        (if file
+          [:div.file-thumbnail {:on-click #(reset! (:active-file ui-state) "whatever")
+                                :style {:background-image (gstring/format "url(\"%s\")" thumbnail)
+                                        :background-position (gstring/format "%spx %spx" offset-x offset-y)}}
+           [:h2 {:style {:margin-left "20px"}} file]]
+          [:div
+           [:h3 "Project Report"]
+           [:h4 {:style {:margin 0}} "Description"]
+           [:h6 {:style {:margin 0}} "Latest modifications as disucssed in meeting [...]"]
+           [:h4 {:style {:margin-top "1rem" :margin-bottom 0}} "Changelog"]
+           [:h6 {:style {:margin 0}} "- Reduce number of colors"]
+           [:h6 {:style {:margin 0}} "- Simplify logo"]])]])]
+   [ui-header]])
 
 (defn app []
   (let [canvas-dom (atom nil)
         monet-canvas (atom nil)]
     [:div.container
-     [home-ui]]))
+     (cond
+       @(:active-file ui-state)
+       [file-ui]
+       :else
+       [presenter-ui])]))
 
 ;;
 ;; Init
