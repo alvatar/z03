@@ -5,9 +5,9 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.908" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.946" :scope "provided"]
                  [com.cognitect/transit-clj "0.8.300"]
-                 [com.cognitect/transit-cljs "0.8.239"]
+                 [com.cognitect/transit-cljs "0.8.243"]
                  [environ "1.1.0"]
                  [ring "1.6.2"]
                  [ring/ring-defaults "0.3.1"]
@@ -18,15 +18,15 @@
                  [com.taoensso/encore "2.92.0"]
                  [com.taoensso/sente "1.11.0"]
                  [com.taoensso/timbre "4.10.0"]
-                 [pointslope/remit "0.1.0-SNAPSHOT"]
+                 [pointslope/remit "0.3.0"]
                  ;; Database
-                 [org.clojure/java.jdbc "0.7.1"]
+                 [org.clojure/java.jdbc "0.7.3"]
                  [org.postgresql/postgresql "42.1.4"]
                  ;; HTML
                  [hiccup "1.0.5"]
-                 [garden "1.3.2"]
+                 [garden "1.3.3"]
                  ;; Cljs
-                 [reagent "0.8.0-alpha1"]
+                 [reagent "0.8.0-alpha2"]
                  [datascript "0.16.2"]
                  [posh "0.5.5"]
                  [rm-hull/monet "0.3.0"]]
@@ -128,8 +128,8 @@
   :doo {:build "test"}
 
   :profiles {:dev
-             {:dependencies [[figwheel "0.5.13"]
-                             [figwheel-sidecar "0.5.13"]
+             {:dependencies [[figwheel "0.5.14"]
+                             [figwheel-sidecar "0.5.14"]
                              [com.cemerick/piggieback "0.2.2"]
                              [org.clojure/tools.nrepl "0.2.13"]
                              [midje "1.8.3"]]
