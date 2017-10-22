@@ -53,7 +53,7 @@
 (defn login-handler [req]
   (let [{:keys [session params]} req
         {:keys [user pass role]} params]
-    (if-let [db-user 1 #_(user/authenticate user pass (keyword role))]
+    (if-let [db-user "thor" #_(user/authenticate user pass (keyword role))]
       (redirect "/hello")
       (redirect "/bad"))))
 
@@ -66,14 +66,17 @@
     (-> (response page)
         (content-type "text/html; charset=utf-8"))))
 
-(defn user-page [{{id :id} :params :as req}]
+(defn user-page [id req]
   (authenticated
    (render id req)))
 
 (defroutes app
   (resources "/")
-  (GET "/u/:id" req user-page)
+  (GET "/u/:id" [id :as req] (user-page id req))
   (GET "/view" req (render html/presenter req))
+  (GET "/login" req (render (html/login) req))
+  (POST "/login" req login-handler)
+  (POST "/logout" req logout-handler)
   ;; Sente
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
@@ -83,17 +86,13 @@
 (defonce server (atom nil))
 
 (defn unauthorized-handler [request metadata]
-  (cond
+  (if (authenticated? request)
     ;; If request is authenticated, raise 403 instead
     ;; of 401 (because user is authenticated but permission
     ;; denied is raised).
-    (authenticated? request)
-    (-> (render (slurp (io/resource "error.html")) request)
+    (-> (render "Unauthorized user" request)
         (assoc :status 403))
-    ;; In other cases, redirect the user to login page.
-    :else
-    (let [current-url (:uri request)]
-      (redirect (format "/login?next=%s" current-url)))))
+    (redirect (format "/login?next=%s" (:uri request)))))
 
 (def auth-backend (session-backend {:unauthorized-handler unauthorized-handler}))
 
@@ -103,11 +102,10 @@
   (reset! server
           (aleph.http/start-server
            (cond-> app
-             true (wrap-authorization auth-backend)
-             true (wrap-authentication auth-backend)
-             true (wrap-defaults (assoc-in (if (= (env :env) "production") secure-site-defaults site-defaults)
-                                           [:params :keywordize] true))
-             (= (env :env) "production") prone/wrap-exceptions
+             (not= (env :env) "testing") (wrap-authorization auth-backend)
+             (not= (env :env) "testing") (wrap-authentication auth-backend)
+             true (wrap-defaults (if (= (env :env) "production") secure-site-defaults site-defaults))
+             (not= (env :env) "production") prone/wrap-exceptions
              ;; (wrap-with-logger :debug println)
              true wrap-gzip)
            {:port (Integer. (or port (env :port) 5000))
