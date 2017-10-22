@@ -52,9 +52,10 @@
 
 (defn login-handler [req]
   (let [{:keys [session params]} req
-        {:keys [user pass role]} params]
+        {:keys [user password continue]} params
+        updated-session (assoc session :identity user)]
     (if-let [db-user "thor" #_(user/authenticate user pass (keyword role))]
-      (redirect "/hello")
+      (assoc (redirect continue) :session updated-session)
       (redirect "/bad"))))
 
 (defn logout-handler [req]
@@ -74,7 +75,7 @@
   (resources "/")
   (GET "/u/:id" [id :as req] (user-page id req))
   (GET "/view" req (render html/presenter req))
-  (GET "/login" req (render (html/login) req))
+  (GET "/login" [continue :as req] (render (html/login continue) req))
   (POST "/login" req login-handler)
   (POST "/logout" req logout-handler)
   ;; Sente
@@ -92,7 +93,7 @@
     ;; denied is raised).
     (-> (render "Unauthorized user" request)
         (assoc :status 403))
-    (redirect (format "/login?next=%s" (:uri request)))))
+    (redirect (format "/login?continue=%s" (:uri request)))))
 
 (def auth-backend (session-backend {:unauthorized-handler unauthorized-handler}))
 

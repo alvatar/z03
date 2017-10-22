@@ -33,7 +33,7 @@
 (def presenter
   (html-template "js/compiled/z03-presenter.js"))
 
-(defn login []
+(defn login [continue]
   (html
    [:html
     head
@@ -41,6 +41,7 @@
      [:div
       [:form {:action "/login" :method "post"}
        (anti-forgery-field)
+       [:input {:type "hidden" :name "continue" :value continue}]
        [:div
         [:div.centered.white "My user"]
         [:div.centered [:input {:type "text" :name "user"}]]]
