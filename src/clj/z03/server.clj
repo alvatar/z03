@@ -2,24 +2,26 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :refer [print-stack-trace]]
             [clojure.pprint :refer [pprint]]
+            [environ.core :refer [env]]
+            [taoensso.timbre :as log]
             ;; Ring
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.gzip :refer [wrap-gzip]]
-            [ring.util.response :refer [response content-type]]
-            ;; Compojure
-            [compojure.core :refer [ANY GET PUT POST DELETE defroutes]]
-            [compojure.route :refer [resources not-found]]
-            [environ.core :refer [env]]
-            ;; Logging
-            [taoensso.timbre :as log]
-            ;; Web
+            [ring.util.response :refer [response redirect content-type]]
             [ring.middleware.defaults :refer :all]
             [ring.middleware.stacktrace :as trace]
+            [prone.middleware :as prone]
+            [compojure.core :refer [ANY GET PUT POST DELETE defroutes]]
+            [compojure.route :refer [resources not-found]]
+            [compojure.response :refer [render]]
             [aleph [netty] [http]]
             [compojure.route :as route]
             [taoensso.sente :as sente]
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
             [taoensso.sente.packers.transit :as sente-transit]
+            [buddy.auth :refer [authenticated? throw-unauthorized]]
+            [buddy.auth.backends.session :refer [session-backend]]
+            [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             ;; Internal
             [z03.actions :as actions]
             [z03.html :as html])
@@ -27,8 +29,10 @@
            (java.net InetSocketAddress))
   (:gen-class))
 
-
+;;
 ;; Sente setup
+;;
+
 (let [packer (sente-transit/get-transit-packer)
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]}
@@ -39,60 +43,73 @@
   (def chsk-send! send-fn) ; ChannelSocket's send API fn
   (def connected-uids connected-uids))
 
-(defn serve-page [page]
+;;
+;; HTTP Handlers
+;;
+
+(defmacro authenticated [f]
+  `(fn [req#] (if-not (authenticated? req#) (throw-unauthorized) ~f)))
+
+(defn login-handler [req]
+  (let [{:keys [session params]} req
+        {:keys [user pass role]} params]
+    (if-let [db-user 1 #_(user/authenticate user pass (keyword role))]
+      (redirect "/hello")
+      (redirect "/bad"))))
+
+(defn logout-handler [req]
+  (let [{:keys [session params]} req]
+    {:status 200 :session (dissoc session :uid)}))
+
+(defn render-page [page]
   (fn [req]
     (-> (response page)
         (content-type "text/html; charset=utf-8"))))
 
+(defn user-page [{{id :id} :params :as req}]
+  (authenticated
+   (render id req)))
+
 (defroutes app
-  (GET "/" req (serve-page html/home))
-  (GET "/view" req (serve-page html/presenter))
   (resources "/")
+  (GET "/u/:id" req user-page)
+  (GET "/view" req (render html/presenter req))
   ;; Sente
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
-  (not-found "Woooot? Not found!"))
-
-;;
-;; Middleware
-;;
-
-(defn wrap-exceptions [app]
-  "Ring wrapper providing exception capture"
-  (let [wrap-error-page
-        (fn [handler]
-          (fn [req]
-            (try (handler req)
-                 (catch Exception e
-                   (try (do (print-stack-trace e 20)
-                            (println "== From request: ==")
-                            (pprint req))
-                        (catch Exception e2
-                          (println "Exception trying to log exception?")))
-                   {:status 500
-                    :headers {"Content-Type" "text/plain"}
-                    :body "500 Internal Error."}))))]
-    ((if (or (env :production)
-             (env :staging))
-       wrap-error-page
-       trace/wrap-stacktrace)
-     app)))
-
-(defonce server (atom nil))
+  (not-found "Not found"))
 
 ;; (onelog.core/set-debug!)
+(defonce server (atom nil))
+
+(defn unauthorized-handler [request metadata]
+  (cond
+    ;; If request is authenticated, raise 403 instead
+    ;; of 401 (because user is authenticated but permission
+    ;; denied is raised).
+    (authenticated? request)
+    (-> (render (slurp (io/resource "error.html")) request)
+        (assoc :status 403))
+    ;; In other cases, redirect the user to login page.
+    :else
+    (let [current-url (:uri request)]
+      (redirect (format "/login?next=%s" current-url)))))
+
+(def auth-backend (session-backend {:unauthorized-handler unauthorized-handler}))
 
 (defn start! [& [port ip]]
   ;; (log/set-level! :debug)
   (actions/start-sente-router! ch-chsk)
   (reset! server
           (aleph.http/start-server
-           (-> app
-               (wrap-defaults (assoc-in (if (env :production) secure-site-defaults site-defaults)
-                                        [:params :keywordize] true))
-               wrap-exceptions
-               ;; (wrap-with-logger :debug println)
-               wrap-gzip)
+           (cond-> app
+             true (wrap-authorization auth-backend)
+             true (wrap-authentication auth-backend)
+             true (wrap-defaults (assoc-in (if (= (env :env) "production") secure-site-defaults site-defaults)
+                                           [:params :keywordize] true))
+             (= (env :env) "production") prone/wrap-exceptions
+             ;; (wrap-with-logger :debug println)
+             true wrap-gzip)
            {:port (Integer. (or port (env :port) 5000))
             :socket-address (if ip (new InetSocketAddress ip port))})))
 
