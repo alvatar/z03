@@ -4,7 +4,6 @@
             [clojure.pprint :refer [pprint]]
             [environ.core :refer [env]]
             [taoensso.timbre :as log]
-            ;; Ring
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.gzip :refer [wrap-gzip]]
             [ring.util.response :refer [response redirect content-type]]
@@ -22,7 +21,7 @@
             [buddy.auth :refer [authenticated? throw-unauthorized]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-            ;; Internal
+            ;; -----
             [z03.actions :as actions]
             [z03.html :as html])
   (:import (java.lang.Integer)
@@ -52,30 +51,26 @@
 
 (defn login-handler [req]
   (let [{:keys [session params]} req
-        {:keys [user password continue]} params
+        {:keys [user password]} params
+        next-url (get-in req [:query-params "next"] "/")
         updated-session (assoc session :identity user)]
     (if-let [db-user "thor" #_(user/authenticate user pass (keyword role))]
-      (assoc (redirect continue) :session updated-session)
+      (assoc (redirect next-url) :session updated-session)
       (redirect "/bad"))))
 
 (defn logout-handler [req]
   (let [{:keys [session params]} req]
-    {:status 200 :session (dissoc session :uid)}))
+    (-> (redirect "/") (assoc :session (dissoc session :identity)))))
 
-(defn render-page [page]
-  (fn [req]
-    (-> (response page)
-        (content-type "text/html; charset=utf-8"))))
-
-(defn user-page [id req]
+(defn user-home [id req]
   (authenticated
-   (render id req)))
+   (render (html/user-home id) req)))
 
 (defroutes app
   (resources "/")
-  (GET "/u/:id" [id :as req] (user-page id req))
+  (GET "/u/:id" [id :as req] (user-home id req))
   (GET "/view" req (render html/presenter req))
-  (GET "/login" [continue :as req] (render (html/login continue) req))
+  (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
   (POST "/logout" req logout-handler)
   ;; Sente
@@ -93,7 +88,7 @@
     ;; denied is raised).
     (-> (render "Unauthorized user" request)
         (assoc :status 403))
-    (redirect (format "/login?continue=%s" (:uri request)))))
+    (redirect (format "/login?next=%s" (:uri request)))))
 
 (def auth-backend (session-backend {:unauthorized-handler unauthorized-handler}))
 
@@ -105,10 +100,10 @@
            (cond-> app
              (not= (env :env) "testing") (wrap-authorization auth-backend)
              (not= (env :env) "testing") (wrap-authentication auth-backend)
-             true (wrap-defaults (if (= (env :env) "production") secure-site-defaults site-defaults))
-             (not= (env :env) "production") prone/wrap-exceptions
-             ;; (wrap-with-logger :debug println)
-             true wrap-gzip)
+             true (wrap-defaults (-> (if (= (env :env) "production") secure-site-defaults site-defaults)
+                                     (assoc :proxy true)))
+             true wrap-gzip
+             (not= (env :env) "production") prone/wrap-exceptions)
            {:port (Integer. (or port (env :port) 5000))
             :socket-address (if ip (new InetSocketAddress ip port))})))
 

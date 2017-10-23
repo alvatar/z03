@@ -27,21 +27,28 @@
      [:div#app]
      [:script {:src js :type "text/javascript"}]]]))
 
-(def home
-  (html-template "js/compiled/z03.js"))
+(defn user-home [id]
+  ;;(html-template "js/compiled/z03.js")
+  (html
+   [:html
+    head
+    [:body
+     [:h1 "Hi, " id]
+     [:form {:action "/logout" :method "post"}
+      (anti-forgery-field)
+      [:input {:type "submit" :value "logout"}]]]]))
 
 (def presenter
   (html-template "js/compiled/z03-presenter.js"))
 
-(defn login [continue]
+(defn login []
   (html
    [:html
     head
     [:body
      [:div
-      [:form {:action "/login" :method "post"}
+      [:form {:method "post"}
        (anti-forgery-field)
-       [:input {:type "hidden" :name "continue" :value continue}]
        [:div
         [:div.centered.white "My user"]
         [:div.centered [:input {:type "text" :name "user"}]]]
