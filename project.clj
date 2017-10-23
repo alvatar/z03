@@ -21,11 +21,11 @@
                  [com.taoensso/timbre "4.10.0"]
                  [pointslope/remit "0.3.0"]
                  [prone "1.1.4"]
+                 [buddy/buddy-core "1.4.0"]
                  [buddy/buddy-auth "2.1.0"]
                  [buddy/buddy-hashers "1.3.0"]
                  [cheshire "5.8.0"]
                  [clj-time "0.14.0"]
-                 [clojure-humanize "0.2.2"]
                  ;; Database
                  [org.clojure/java.jdbc "0.7.3"]
                  [org.postgresql/postgresql "42.1.4"]
@@ -33,6 +33,9 @@
                  ;; HTML
                  [hiccup "1.0.5"]
                  [garden "1.3.3"]
+                 ;; Microlibraries
+                 [camel-snake-kebab "0.4.0"]
+                 [clojure-humanize "0.2.2"]
                  ;; Cljs
                  [reagent "0.8.0-alpha2"]
                  [datascript "0.16.2"]

@@ -23,7 +23,8 @@
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             ;; -----
             [z03.actions :as actions]
-            [z03.html :as html])
+            [z03.html :as html]
+            [z03.database :as db])
   (:import (java.lang.Integer)
            (java.net InetSocketAddress))
   (:gen-class))
@@ -54,9 +55,9 @@
         {:keys [user password]} params
         next-url (get-in req [:query-params "next"] "/")
         updated-session (assoc session :identity user)]
-    (if-let [db-user "thor" #_(user/authenticate user pass (keyword role))]
+    (if-let [db-user (db/user-authenticate user password)]
       (assoc (redirect next-url) :session updated-session)
-      (redirect "/bad"))))
+      (redirect (format "/login?%s" (:query-string req))))))
 
 (defn logout-handler [req]
   (let [{:keys [session params]} req]
