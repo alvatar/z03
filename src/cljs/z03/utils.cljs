@@ -24,7 +24,10 @@
    (fn [x] (if (predicate x) (f x) x))
    coll))
 
-
+(defn open-url [url blank?]
+  (if blank?
+    (. js/window open url "_blank")
+    (aset js/window "location" url)))
 
 ;; window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;   //compatibility for firefox and chrome
 ;;     var pc = new RTCPeerConnection({iceServers:[]}), noop = function(){};

@@ -1,12 +1,21 @@
 (ns z03.style
-  (:require
-   [goog.style]
-   [garden.core :refer [css]]
-   [garden.units :as u]
-   [garden.stylesheet :as stylesheet]
-   [garden.color :as color :refer [hsl rgb]])
-  (:require-macros
-   [garden.def :refer [defkeyframes]]))
+  #?(:clj
+     (:require
+      [garden.core :refer [css]]
+      [garden.units :as u]
+      [garden.stylesheet :as stylesheet]
+      [garden.color :as color :refer [hsl rgb]]
+      [garden.def :refer [defkeyframes]]))
+  #?(:cljs
+     (:require
+      [goog.style]
+      [garden.core :refer [css]]
+      [garden.units :as u]
+      [garden.stylesheet :as stylesheet]
+      [garden.color :as color :refer [hsl rgb]]))
+  #?(:cljs
+     (:require-macros
+      [garden.def :refer [defkeyframes]])))
 
   
 (defkeyframes drawer-animation-show
@@ -108,7 +117,10 @@
                        :filter "opacity(60%) sepia(100%)"}
      [:&:hover {:filter "opacity(100%)"}]]]))
 
-(defonce style-node (atom nil))
-(if @style-node
-  (goog.style/setStyles @style-node styles)
-  (reset! style-node (goog.style/installStyles styles)))
+#?(:cljs
+   (defonce style-node (atom nil)))
+
+#?(:cljs
+   (if @style-node
+     (goog.style/setStyles @style-node styles)
+     (reset! style-node (goog.style/installStyles styles))))

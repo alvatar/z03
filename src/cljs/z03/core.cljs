@@ -88,6 +88,16 @@
           [:h6 {:style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
    [home-ui-header]])
 
+(defn logout [& [on-success-fn on-failure-fn]]
+  (sente/ajax-lite "/logout"
+                   {:method :post
+                    :headers {:X-CSRF-Token (:csrf-token @client/chsk-state)}
+                    :params {}}
+                   (fn [ajax-resp]
+                     (if (sente/cb-success? ajax-resp)
+                       (when on-success-fn (on-success-fn))
+                       (when on-failure-fn (on-failure-fn))))))
+
 (defn project-ui-header []
   [:div.header-container
    [:div.header-text
@@ -95,6 +105,7 @@
      ;[:i.fa.fa-undo {:aria-hidden "true"}]
      [:h4.clickable {:on-click #(reset! (:active-project ui-state) nil)} "Back"]]
     [:h4.lfloat.clickable "Settings"]
+    [:h4.rfloat.clickable {:on-click #(logout (fn [] (js/alert "hi, todo")))} "Logout"]
     [:h4.rfloat.clickable
      @(p/q '[:find ?n .
              :where [?e]
@@ -107,7 +118,7 @@
       [:div.section-container
        [:div {:style {:height "280px"}}
         [:div.center
-         [:object {:type "image/svg+xml" :data "svg/graph-prototype.svg"}
+         [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
           "Your browser does not support SVG"]
          [:div {:style {:position "absolute" :top 0 :left 0}}
           [:svg {:width 750 :height 280}

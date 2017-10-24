@@ -68,7 +68,7 @@
    (render (html/user-home id) req)))
 
 (defroutes app
-  (resources "/")
+  (GET "/" req (render html/index req))
   (GET "/u/:id" [id :as req] (user-home id req))
   (GET "/view" req (render html/presenter req))
   (GET "/login" req (render (html/login) req))
@@ -77,6 +77,7 @@
   ;; Sente
   (GET "/chsk" req (ring-ajax-get-or-ws-handshake req))
   (POST "/chsk" req (ring-ajax-post req))
+  (resources "/")
   (not-found "Not found"))
 
 ;; (onelog.core/set-debug!)
