@@ -26,6 +26,9 @@
   [:from {:right 0}]
   [:to {:right (u/percent -50)}])
 
+(def dark-grey "#333")
+(def light-grey "#bbb")
+
 (def styles
   ;; Ref http://www.webp.ch/fourre-tout/target/#!/dgellow.fourre_tout.garden
   (css
@@ -36,7 +39,12 @@
     {:font-family ["Oswald" "sans-serif"]
      :font-weight 200
      :overflow-x "hidden"
-     :line-height "1.2rem"}]
+     :line-height "1.2rem"
+     :text-decoration 'none}]
+   [:a:link {:text-decoration 'none}]
+   [:a:hover {:text-decoration 'none}]
+   [:a:active {:text-decoration 'none}]
+   [:a:visited {:text-decoration 'none}]
    [:h1 :h2 :h3 {:font-family ["Bitter" "sans-serif"]
                  :font-weight 700}]
    [:h1 {:line-height (u/rem 2.8)}]
@@ -60,7 +68,27 @@
    [:.nomargin {:margin 0 :padding 0}]
    [:.clickable {:cursor "pointer"}]
    [:.divider {:border {:style "solid" :width "0 0 1 0"}}]
+   [:.flat-text-field {:background-color light-grey
+                       :color dark-grey
+                       :font-family ["Oswald" "sans-serif"]
+                       :border "none"
+                       :padding "10px 32px"
+                       ;:text-align "center"
+                       :text-decoration "none"
+                       :display "inline-block"
+                       :font-size "16px"}]
+   [:.flat-button {:background-color light-grey
+                   :color dark-grey
+                   :cursor "pointer"
+                   :font-family ["Oswald" "sans-serif"]
+                   :border "none"
+                   :padding "15px 32px"
+                   :text-align "center"
+                   :text-decoration "none"
+                   :display "inline-block"
+                   :font-size "16px"}]
    ;; Colors
+   [:.white {:color "white"}]
    [:.bg-aqua {:background-color "#7fdbff"}]
    [:.aqua {:color "#7fdbff"}]
    ;; Animations
@@ -73,7 +101,6 @@
                                     :animation [[drawer-animation-show "1.5s"]]})]
       [:.drawer-hide (merge drawer {:right (u/percent -50)
                                     :animation [[drawer-animation-hide "1.0s"]]})]])
-   [:.file-menu]
    [:.file-item {:padding "0 2rem 1rem 2rem"}]
    [:.container {:position "relative"
                  :margin "0 auto"

@@ -52,12 +52,13 @@
 
 (defn login-handler [req]
   (let [{:keys [session params]} req
-        {:keys [user password]} params
-        next-url (get-in req [:query-params "next"] "/")
-        updated-session (assoc session :identity user)]
-    (if-let [db-user (db/user-authenticate user password)]
-      (assoc (redirect next-url) :session updated-session)
-      (redirect (format "/login?%s" (:query-string req))))))
+        {:keys [user password]} params]
+    (println (db/user-authenticate user password))
+    (if-let [user-id (:id (db/user-authenticate user password))]
+      (let [updated-session (assoc session :identity user-id)
+            next-url (get-in req [:query-params "next"] (str "/u/" user-id))]
+        (assoc (redirect next-url) :session updated-session))
+      (redirect (format "/login%s" (when-let [qs (:query-string req)] (str "?" qs)))))))
 
 (defn logout-handler [req]
   (let [{:keys [session params]} req]
@@ -68,9 +69,10 @@
    (render (html/user-home id) req)))
 
 (defroutes app
-  (GET "/" req (render html/index req))
+  (GET "/" req (render (html/index) req))
+  (GET "/u" req #(redirect (get-in % [:session :identity] "/login")))
   (GET "/u/:id" [id :as req] (user-home id req))
-  (GET "/view" req (render html/presenter req))
+  (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
   (POST "/logout" req logout-handler)

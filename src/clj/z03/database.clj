@@ -63,7 +63,7 @@
   (try
     (let [user (user-get-by :user-name user-name)]
       (and (hashers/check pass-plaintext (:password user))
-           (:user-name user)))
+           user))
     (catch Exception e
       (log/debugf "Exception authenticating user: %s" (with-out-str (pprint e))))))
 
