@@ -68,7 +68,7 @@
 (defn home-ui-header []
   [:div.header-container
    [:div.header-text
-    [:h4.lfloat.clickable "Settings"]
+    [:h4.lfloat.clickable {:on-click #(js/alert "User Settings (TODO)")} "Settings"]
     [:h4.rfloat.clickable
      @(p/q '[:find ?n .
              :where [?e]
@@ -102,11 +102,11 @@
   [:div.header-container
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
-     ;[:i.fa.fa-undo {:aria-hidden "true"}]
+     ;; [:i.fa.fa-undo {:aria-hidden "true"}]
      [:h4.clickable {:on-click #(reset! (:active-project ui-state) nil)} "Back"]]
-    [:h4.lfloat.clickable "Settings"]
+    [:h4.lfloat.clickable {:on-click #(js/alert "Project Settings (TODO)")} "Settings"]
     [:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
-    [:h4.rfloat.clickable
+    [:h4.rfloat
      @(p/q '[:find ?n .
              :where [?e]
              [?e :user/name ?n]]

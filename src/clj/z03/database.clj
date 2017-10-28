@@ -19,8 +19,9 @@
 ;; https://github.com/jeffpsherman/postgres-jsonb-clojure/blob/master/src/postgres_jsonb_clojure/core.clj
 
 (def db (or (env :database-url)
-            ;;"postgres://zapxeakmarafti:O9-vM29dzvG0g2Qo505pTMJTkg@ec2-54-75-233-92.eu-west-1.compute.amazonaws.com:5432/d1heam857nkip0?sslmode=require"
-            "postgresql://localhost:5432/ikidz-dev"))
+             ;;"postgres://zapxeakmarafti:O9-vM29dzvG0g2Qo505pTMJTkg@ec2-54-75-233-92.eu-west-1.compute.amazonaws.com:5432/d1heam857nkip0?sslmode=require"
+             "postgresql://localhost:5432/ikidz-dev"))
+(def dbc (sql/get-connection db))
 
 (println "Connecting to PostgreSQL:" db)
 
@@ -30,6 +31,7 @@
 
 (defn connect-to-local []
   (def db "postgresql://localhost:5432/ikidz-dev")
+  (def dbc (sql/get-connection db))
   (println "Connecting to PostgreSQL:" db))
 
 ;;
@@ -41,6 +43,27 @@
 (defn ->snake_case [r] (reduce-kv #(assoc %1 (case-shift/->snake_case %2) %3) {} r))
 
 (defn keyword->column [k] (case-shift/->snake_case (name k)))
+
+;;
+;; Datatypes
+;;
+
+(extend-protocol clojure.java.jdbc/ISQLParameter
+  clojure.lang.IPersistentVector
+  (set-parameter [v ^java.sql.PreparedStatement stmt ^long i]
+    (let [conn (.getConnection stmt)
+          meta (.getParameterMetaData stmt)
+          type-name (.getParameterTypeName meta i)]
+      (if-let [elem-type (when (= (first type-name) \_) (apply str (rest type-name)))]
+        (.setObject stmt i (.createArrayOf conn elem-type (to-array v)))
+        (.setObject stmt i v)))))
+
+(extend-protocol clojure.java.jdbc/IResultSetReadColumn
+  java.sql.Array
+  (result-set-read-column [val _ _]
+    (into [] (.getArray val))))
+
+(defn sql-array [a] (.createArrayOf dbc "varchar" (into-array String a)))
 
 (defn clj-time->sql-time [clj-time]
  (java.sql.Date. (.getMillis (.toDateTime clj-time))))
@@ -68,12 +91,33 @@
       (log/debugf "Exception authenticating user: %s" (with-out-str (pprint e))))))
 
 ;;
+;; Projects
+;;
+
+(defn project-create! [user-id git-repo name description]
+  (sql/insert! db "projects"
+               ["user_id" "git_repo" "name" "description"]
+               [user-id git-repo name description]))
+
+(defn project-find-by [by id]
+  (mapv
+   ->kebab-case
+   (sql/query db [(format "SELECT * FROM projects WHERE %s = ?" (keyword->column by)) id])))
+
+(defn project-update! [by id vals]
+  (sql/update! db :projects (-> vals
+                                (dissoc :id)
+                                ->snake_case)
+               [(format "%s  = ?" (name by)) id]))
+
+;;
 ;; Development utilities
 ;;
 
 (defn reset-database!!! []
   (try
     (sql/db-do-commands db ["DROP TABLE IF EXISTS users CASCADE;"
+                            "DROP TABLE IF EXISTS projects CASCADE;"
                             "
 CREATE TABLE users (
   id              SERIAL PRIMARY KEY,
@@ -84,6 +128,23 @@ CREATE TABLE users (
   family_name     VARCHAR(256) NOT NULL
 )
 "
+                            ;; Revision max name is 255 chars
+                            "
+CREATE TABLE projects (
+  id              SERIAL PRIMARY KEY,
+  user_id         INTEGER REFERENCES users(id) NOT NULL,
+  created         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  name            VARCHAR(1024) NOT NULL,
+  description     VARCHAR(2048) NOT NULL,
+  top_revisions   VARCHAR(255) ARRAY [5],
+  git_repo        TEXT
+)
+"
                             ])
-    (catch Exception e (or (.getNextException e) e)))
-  (user-create! "thor" "alvaro" "Thor" "Quator"))
+    (catch Exception e (or e (.getNextException e))))
+  ;;
+  ;; Init data for development
+  ;;
+  (user-create! "thor" "alvaro" "Thor" "Quator")
+  (project-create! 1 nil "ios7-templates" "iOS7 Template System")
+  (project-update! :name "ios7-templates" {:top-revisions ["[master] Final version" "Mockup v4" "Mockup v3" "Mockup v2" "Mockup v1"]}))

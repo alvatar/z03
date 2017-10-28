@@ -33,7 +33,6 @@
 ;;   (when-let [e @selected-revision]
 ;;     (p/transact! db-conn [[:db/retract 1 :revision/id e]])))
 
-
 ;;
 ;; UI
 ;;
@@ -96,6 +95,6 @@
                    {:file "file1.psd" :last-commit "General structure for branding"}]}})
 
 (defonce ui-state
-  {:active-project (r/atom "Example")
-   :active-revision (r/atom (:master revisions))
+  {:active-project (r/atom nil)
+   :active-revision (r/atom nil)
    :active-file (r/atom nil)})
