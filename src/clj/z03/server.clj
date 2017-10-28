@@ -53,7 +53,6 @@
 (defn login-handler [req]
   (let [{:keys [session params]} req
         {:keys [user password]} params]
-    (println (db/user-authenticate user password))
     (if-let [user-id (:id (db/user-authenticate user password))]
       (let [updated-session (assoc session :identity user-id)
             next-url (get-in req [:query-params "next"] (str "/u/" user-id))]

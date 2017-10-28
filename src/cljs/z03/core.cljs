@@ -22,8 +22,8 @@
    [goog.events.MouseWheelHandler]
    [goog.events.KeyCodes]
    [goog.events.KeyHandler]
-   [goog.fx :as fx]
-   [goog.fx.Dragger.EventType]
+   ;; [goog.fx :as fx]
+   ;; [goog.fx.Dragger.EventType]
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
@@ -105,7 +105,7 @@
      ;[:i.fa.fa-undo {:aria-hidden "true"}]
      [:h4.clickable {:on-click #(reset! (:active-project ui-state) nil)} "Back"]]
     [:h4.lfloat.clickable "Settings"]
-    [:h4.rfloat.clickable {:on-click #(logout (fn [] (js/alert "hi, todo")))} "Logout"]
+    [:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
     [:h4.rfloat.clickable
      @(p/q '[:find ?n .
              :where [?e]
