@@ -5,7 +5,9 @@
             [environ.core :refer [env]]
             [taoensso.sente :as sente]
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
-            [taoensso.sente.packers.transit :as sente-transit]))
+            [taoensso.sente.packers.transit :as sente-transit]
+            ;; -----
+            [z03.database :as db]))
 
 ;;
 ;; Sente event handlers
@@ -30,10 +32,11 @@
     (when ?reply-fn
       (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
 
-(defmethod -event-msg-handler :user/store
+(defmethod -event-msg-handler :user/get-initial-data
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (?reply-fn {:status :ok
-              :received-data ?data}))
+  (if-let [projects (db/project-find-by :user-id 1)];;TODO: from session
+    (?reply-fn {:status :ok :projects projects})
+    (?reply-fn {:status :error})))
 
 ;;
 ;; Sente event router (`event-msg-handler` loop)

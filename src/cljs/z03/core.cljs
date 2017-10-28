@@ -39,6 +39,27 @@
 (enable-console-print!)
 (timbre/set-level! :debug)
 
+(defonce app-state {:projects (r/atom nil)})
+
+;;
+;; Actions
+;;
+
+(defn build-standard-request [id & [handler]]
+  (fn [data & [cb]]
+    (client/chsk-send!
+     [id data] 30000
+     (fn [resp]
+       (if-not (and (sente/cb-success? resp) (= :ok (:status resp)))
+         (do (log* resp)
+             (js/alert (gstring/format "Ups... Error in %s ¯\\_(ツ)_/¯ Restart the app, please..." id)))
+         (do (when handler (handler resp))
+             (when cb (cb resp))))))))
+
+(def get-initial-data
+  (build-standard-request :user/get-initial-data
+                          (fn [{:keys [projects]}]
+                            (reset! (:projects app-state) projects))))
 
 ;;
 ;; Event Handlers
@@ -48,18 +69,15 @@
   [{:as ev-msg :keys [?data]}]
   (let [[old-state-map new-state-map] (have vector? ?data)]
     (when (:first-open? new-state-map)
-      ;; (log* new-state-map)
-      nil
-      )))
+      nil)))
 
 (defmethod client/-event-msg-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
   (let [[?user ?csrf-token ?handshake-data] ?data]
     ;; (reset! (:user-id app-state) ?user)
-    (when-not (= ?user :taoensso.sente/nil-uid)
-      nil
-      ;;(log* "HANDSHAKE")
-      )))
+    ;; (when-not (= ?user :taoensso.sente/nil-uid)
+    ;;   (log* "HANDSHAKE"))
+    (get-initial-data)))
 
 ;;
 ;; UI Components
@@ -78,14 +96,14 @@
 (defn home-ui []
   [:div.section-container
    [:div.project-list
-    (for [{:keys [id description commits]} globals/projects]
-      [:div.item.clickable {:key id :on-click #(reset! (:active-project ui-state) id)}
+    (for [{:keys [name description top-revisions]} @(:projects app-state)]
+      [:div.item.clickable {:key name :on-click #(reset! (:active-project ui-state) name)}
        [:div {:style {:width "50%" :background-color "50%"}}
-        [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} id]
+        [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} name]
         [:h4 {:style {:margin-top "10px"}} description]]
        [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
-        (for [c (take 5 commits)]
-          [:h6 {:style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
+        (for [[c idx] (map vector top-revisions (range))]
+          [:h6 {:key (str name c) :style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
    [home-ui-header]])
 
 (defn logout [& [on-success-fn on-failure-fn]]
