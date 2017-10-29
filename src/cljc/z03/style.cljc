@@ -29,6 +29,38 @@
 (def dark-grey "#333")
 (def light-grey "#bbb")
 
+;; @keyframes sk-bounce {
+;;   0%, 100% { 
+;;     transform: scale(0.0);
+;;     -webkit-transform: scale(0.0);
+;;   } 50% { 
+;;     transform: scale(1.0);
+;;     -webkit-transform: scale(1.0);
+;;   }
+;; }
+
+(defkeyframes spinner-bounce
+  ["0%, 100%" {:transform "scale(0.0)"
+               :-webkit-transform "scale(0.0)"}]
+  ["50%" {:transform "scale(1.0)"
+          :-webkit-transform "scale(1.0)"}])
+
+(def spinner
+  [spinner-bounce
+   [:.spinner {:width (u/px 40)
+               :height (u/px 40)
+               :position "relative"}]
+   [:.double-bounce1 :.double-bounce2 {:width (u/percent 100)
+                                       :height (u/percent 100)
+                                       :border-radius (u/percent 50)
+                                       :background-color "#333"
+                                       :opacity 0.6
+                                       :position "absolute"
+                                       :top 0
+                                       :left 0
+                                       :animation "spinner-bounce 2.0s infinite ease-in-out"}]
+   [:.double-bounce2 {:animation-delay "-1.0s"}]])
+
 (def styles
   ;; Ref http://www.webp.ch/fourre-tout/target/#!/dgellow.fourre_tout.garden
   (css
@@ -67,6 +99,9 @@
    [:.center {:text-align "center"}]
    [:.nomargin {:margin 0 :padding 0}]
    [:.clickable {:cursor "pointer"}]
+   [:.center-aligner {:height "100%" :width "100%"
+                      :display "flex" :align-items "center" :justify-content "center"}]
+   ;; Elements
    [:.divider {:border {:style "solid" :width "0 0 1 0"}}]
    [:.flat-text-field {:background-color light-grey
                        :color dark-grey
@@ -94,6 +129,7 @@
    ;; Animations
    drawer-animation-show
    drawer-animation-hide
+   spinner
    ;; Project UI
    (let [drawer {:position "absolute" :top 0
                  :width "50%" :height "100%"}]

@@ -136,7 +136,7 @@ CREATE TABLE projects (
   created         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
   name            VARCHAR(1024) NOT NULL,
   description     VARCHAR(2048) NOT NULL,
-  top_revisions   VARCHAR(255) ARRAY [5],
+  latest_commits  VARCHAR(255) ARRAY [5],
   git_repo        TEXT
 )
 "
@@ -147,4 +147,6 @@ CREATE TABLE projects (
   ;;
   (user-create! "thor" "alvaro" "Thor" "Quator")
   (project-create! 1 nil "ios7-templates" "iOS7 Template System")
-  (project-update! :name "ios7-templates" {:top-revisions ["[master] Final version" "Mockup v4" "Mockup v3" "Mockup v2" "Mockup v1"]}))
+  (project-update! :name "ios7-templates" {:latest-commits ["[master] Final version" "Mockup v4" "Mockup v3" "Mockup v2" "Mockup v1"]})
+  (project-create! 1 nil "rick-interstellar-enterprises-branding" "Rick Interstellar Enterprises: branding")
+  (project-update! :name "rick-interstellar-enterprises-branding" {:latest-commits ["[master] Branding v1" "Simplified logo; reduced number of colors"]}))

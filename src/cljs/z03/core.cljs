@@ -17,13 +17,6 @@
    [goog.string :as gstring]
    [goog.math :as gmath]
    [goog.math.Rect]
-   [goog.events]
-   [goog.events.EventType]
-   [goog.events.MouseWheelHandler]
-   [goog.events.KeyCodes]
-   [goog.events.KeyHandler]
-   ;; [goog.fx :as fx]
-   ;; [goog.fx.Dragger.EventType]
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
@@ -38,8 +31,6 @@
 
 (enable-console-print!)
 (timbre/set-level! :debug)
-
-(defonce app-state {:projects (r/atom nil)})
 
 ;;
 ;; Actions
@@ -56,10 +47,16 @@
          (do (when handler (handler resp))
              (when cb (cb resp))))))))
 
-(def get-initial-data
+(def get-user-initial-data
   (build-standard-request :user/get-initial-data
                           (fn [{:keys [projects]}]
-                            (reset! (:projects app-state) projects))))
+                            (reset! (:projects ui-state) projects))))
+
+(def get-project-initial-data
+  (build-standard-request :project/get-initial-data
+                          (fn [{:keys [commits]}]
+                            (reset! (:commits ui-state) commits)
+                            (reset! (:active-commit ui-state) (second (first commits))))))
 
 ;;
 ;; Event Handlers
@@ -77,7 +74,7 @@
     ;; (reset! (:user-id app-state) ?user)
     ;; (when-not (= ?user :taoensso.sente/nil-uid)
     ;;   (log* "HANDSHAKE"))
-    (get-initial-data)))
+    (get-user-initial-data)))
 
 ;;
 ;; UI Components
@@ -96,13 +93,15 @@
 (defn home-ui []
   [:div.section-container
    [:div.project-list
-    (for [{:keys [name description top-revisions]} @(:projects app-state)]
-      [:div.item.clickable {:key name :on-click #(reset! (:active-project ui-state) name)}
+    (for [{:keys [name description latest-commits]} @(:projects ui-state)]
+      [:div.item.clickable {:key name :on-click (fn []
+                                                  (reset! (:active-project ui-state) name)
+                                                  (get-project-initial-data {:name name}))}
        [:div {:style {:width "50%" :background-color "50%"}}
         [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} name]
         [:h4 {:style {:margin-top "10px"}} description]]
        [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
-        (for [[c idx] (map vector top-revisions (range))]
+        (for [[c idx] (map vector latest-commits (range))]
           [:h6 {:key (str name c) :style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
    [home-ui-header]])
 
@@ -131,42 +130,45 @@
            db-conn)]]])
 
 (defn project-ui []
-  (let [hover-revision (r/atom false)]
+  (let [hover-commit (r/atom false)]
     (fn []
-      [:div.section-container
-       [:div {:style {:height "280px"}}
-        [:div.center
-         [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
-          "Your browser does not support SVG"]
-         [:div {:style {:position "absolute" :top 0 :left 0}}
-          [:svg {:width 750 :height 280}
-           [:circle {:cx 699 :cy 186
-                     :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
-                     :cursor "pointer"
-                     :on-click #(reset! (:active-revision ui-state) (:master globals/revisions))}]
-           [:circle {:cx 646.5 :cy 186
-                     :r 9 :style {:fill "#888"}
-                     :cursor "pointer"
-                     :on-mouse-over #(reset! hover-revision true)
-                     :on-mouse-out #(reset! hover-revision false)
-                     :on-click #(reset! (:active-revision ui-state) (:head1 globals/revisions))}]
-           (when @hover-revision
-             [:g
-              [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
-              [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
-       (let [active-revision @(:active-revision ui-state)]
+      (if-let [active-commit @(:active-commit ui-state)]
+        [:div.section-container
+         [:div {:style {:height "280px"}}
+          [:div.center
+           [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
+            "Your browser does not support SVG"]
+           [:div {:style {:position "absolute" :top 0 :left 0}}
+            [:svg {:width 750 :height 280}
+             [:circle {:cx 699 :cy 186
+                       :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
+                       :cursor "pointer"
+                       :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "master"))}]
+             [:circle {:cx 646.5 :cy 186
+                       :r 9 :style {:fill "#888"}
+                       :cursor "pointer"
+                       :on-mouse-over #(reset! hover-commit true)
+                       :on-mouse-out #(reset! hover-commit false)
+                       :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "head1"))}]
+             (when @hover-commit
+               [:g
+                [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
+                [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
          [:div
-          [:h2 (:description active-revision)]
+          [:h2 (:description active-commit)]
           [:div.grid
-           [:div.col-10>h5 "Tags: " (clojure.string/join ", " (:tags active-revision))]
-           [:div.col-2>h4.rfloat.link "get presentation link"]]
+           [:div.col-12>h4.rfloat.link "get presentation link"]]
           [:div.files-listing
-           (for [{:keys [file last-commit]} (:files active-revision)]
+           (for [{:keys [file last-commit]} (:files active-commit)]
              [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) file)}
                [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} file]]
-              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]])]])
-       [project-ui-header]])))
+              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]])]]
+         [project-ui-header]]
+        [:div
+         [:div.center-aligner
+          [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
+         [project-ui-header]]))))
 
 (defn app []
   [:div.container
