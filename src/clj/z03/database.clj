@@ -104,6 +104,8 @@
    ->kebab-case
    (sql/query db [(format "SELECT * FROM projects WHERE %s = ?" (keyword->column by)) id])))
 
+(def project-get-by (comp first project-find-by))
+
 (defn project-update! [by id vals]
   (sql/update! db :projects (-> vals
                                 (dissoc :id)
@@ -146,7 +148,7 @@ CREATE TABLE projects (
   ;; Init data for development
   ;;
   (user-create! "thor" "alvaro" "Thor" "Quator")
-  (project-create! 1 nil "ios7-templates" "iOS7 Template System")
+  (project-create! 1 "/data/Dropbox/projects/z03" "ios7-templates" "iOS7 Template System")
   (project-update! :name "ios7-templates" {:latest-commits ["[master] Final version" "Mockup v4" "Mockup v3" "Mockup v2" "Mockup v1"]})
-  (project-create! 1 nil "rick-interstellar-enterprises-branding" "Rick Interstellar Enterprises: branding")
+  (project-create! 1 "/data/Dropbox/projects/cointrust" "rick-interstellar-enterprises-branding" "Rick Interstellar Enterprises: branding")
   (project-update! :name "rick-interstellar-enterprises-branding" {:latest-commits ["[master] Branding v1" "Simplified logo; reduced number of colors"]}))
