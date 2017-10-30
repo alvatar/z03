@@ -165,7 +165,7 @@
                 [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
          [:div
           [:div.grid.files-listing-header
-           [:div.col-9>h5 [:strong (:author active-commit)] " " (:subject active-commit)]
+           [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
            [:div.col-3>h5.rfloat.link "get presentation link"]]
           [:div.files-listing
            (let [grouped (group-by #(= (:filetype %) "directory") @(:files ui-state))

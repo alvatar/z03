@@ -138,7 +138,7 @@
                                     :animation [[drawer-animation-show "1.5s"]]})]
       [:.drawer-hide (merge drawer {:right (u/percent -50)
                                     :animation [[drawer-animation-hide "1.0s"]]})]])
-   [:.file-item {:padding "0 2rem 1rem 2rem"}]
+   [:.file-item {:padding "0 1rem 1rem 1rem"}]
    [:.container {:position "relative"
                  :margin "0 auto"
                  :width (u/px 900)}]
@@ -170,7 +170,8 @@
     [:h6 {:float "left" :margin {:top (u/px 0) :right (u/px 20)}}]]
    [:.files-listing-header {:border {:style "solid" :width "0 0 1 0"}
                             :margin {:bottom (u/px 0)}}
-    [:h5 {:margin {:bottom (u/px 0)}}]]
+    [:h5 {:margin {:bottom (u/px 0)}}]
+    [:.author {:margin {:left (u/px 7)}}]]
    ;; Presenter UI
    [:.presenter-container
     [:.file-list {:position "absolute" :top (u/rem 4)}]

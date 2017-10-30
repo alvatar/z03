@@ -71,14 +71,16 @@
          :author author
          :subject subject}))))
 
-(defn get-files-info [user-id repo-dir git-ref]
+(defn get-files-info [user-id repo-dir dir git-ref]
   (let [results
         (ssh-send user-id
                   (str "cd "
                        repo-dir
                        " && git ls-tree --name-only "
                        git-ref
-                       " | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file && file -b $file; done"))]
+                       " ./"
+                       dir
+                       "/ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file && file -b $file; done"))]
     (for [[line filetype] (partition 2 results)]
       (let [[filename age & [subject]] (clojure.string/split line #"\*")]
         {:filename filename

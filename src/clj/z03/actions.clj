@@ -58,7 +58,7 @@
                 :user-id
                 (= user-id))
       (let [commits (git/get-commits user-id (:git-repo project))
-            files (git/get-files-info user-id (:git-repo project) "master")]
+            files (git/get-files-info user-id (:git-repo project) "/" "master")]
         (?reply-fn {:status :ok :commits commits :files files}))
       (?reply-fn {:status :error}))))
 
@@ -76,5 +76,3 @@
           (sente/start-server-chsk-router!
            ch-chsk
            event-msg-handler)))
-
-
