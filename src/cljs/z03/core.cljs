@@ -54,9 +54,10 @@
 
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
-                          (fn [{:keys [commits]}]
+                          (fn [{:keys [commits files]}]
                             (reset! (:commits ui-state) commits)
-                            (reset! (:active-commit ui-state) (second (first commits))))))
+                            (reset! (:active-commit ui-state) (first commits))
+                            (reset! (:files ui-state) files))))
 
 ;;
 ;; Event Handlers
@@ -79,6 +80,14 @@
 ;;
 ;; UI Components
 ;;
+
+(defn footer []
+  [:div.footer
+   [:div.col-4.center [:div.login-logo [:img {:src "/svg/logo.svg" :width "90px"}]]]
+   [:h6 (gstring/format "© %d Metapen Oü" (.getFullYear (js/Date.)))]
+   [:h6 "Contact"]
+   [:h6 "Terms"]
+   [:h6 "Privacy"]])
 
 (defn home-ui-header []
   [:div.header-container
@@ -133,7 +142,7 @@
   (let [hover-commit (r/atom false)]
     (fn []
       (if-let [active-commit @(:active-commit ui-state)]
-        [:div.section-container
+        [:div
          [:div {:style {:height "280px"}}
           [:div.center
            [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
@@ -155,20 +164,35 @@
                 [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
                 [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
          [:div
-          [:h2 (:description active-commit)]
-          [:div.grid
-           [:div.col-12>h4.rfloat.link "get presentation link"]]
+          [:div.grid.files-listing-header
+           [:div.col-9>h5 [:strong (:author active-commit)] " " (:subject active-commit)]
+           [:div.col-3>h5.rfloat.link "get presentation link"]]
           [:div.files-listing
-           (for [{:keys [file last-commit]} (:files active-commit)]
-             [:div.grid {:key file :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-              [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) file)}
-               [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} file]]
-              [:div.file-item.col-9 [:p.nomargin {:style {:line-height "40px" :height "40px"}} last-commit]]])]]
-         [project-ui-header]]
+           (let [grouped (group-by #(= (:filetype %) "directory") @(:files ui-state))
+                 directories (get grouped true)
+                 files (get grouped false)]
+             (concat
+              (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
+                [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                 [:div.file-item.col-3.clickable {:on-click #(js/alert "NAVIGATE: TODO")}
+                  [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
+                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
+                 [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+                 [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
+              (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
+                [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                 [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
+                  [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
+                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
+                 [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+                 [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]]
+         [project-ui-header]
+         [footer]]
         [:div
          [:div.center-aligner
           [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
-         [project-ui-header]]))))
+         [project-ui-header]
+         [footer]]))))
 
 (defn app []
   [:div.container

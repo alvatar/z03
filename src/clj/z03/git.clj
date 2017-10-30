@@ -62,13 +62,14 @@
         (ssh-send user-id
                   (str "cd "
                        repo-dir
-                       " && git --no-pager log --graph --format=format:'%H-%ar-%s-%an-%d' --all --color=never"))]
-    (for [line results]
-      (let [[hash age & rest] (clojure.string/split line #"-")]
+                       " && git rev-list --no-max-parents --all --color=never --format=format:\"%H<>%P<>%ar<>%an<>%s\""))]
+    (for [[_ line] (partition 2 results)]
+      (let [[hash parents age author subject] (clojure.string/split line #"<>")]
         {:hash (re-find #"\w+" hash)
+         :parents (clojure.string/split parents #" ")
          :age age
-         :message (first (butlast rest))
-         :author (last rest)}))))
+         :author author
+         :subject subject}))))
 
 (defn get-files-info [user-id repo-dir git-ref]
   (let [results
@@ -77,11 +78,10 @@
                        repo-dir
                        " && git ls-tree --name-only "
                        git-ref
-                       " | while read file; do git --no-pager log -n 1 --pretty=\"$file-%H-%ar\" -- $file && file -b $file; done"))]
+                       " | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file && file -b $file; done"))]
     (for [[line filetype] (partition 2 results)]
-      (let [all (clojure.string/split line #"-")
-            reversed (reverse all)]
-        {:filename (first (drop-last 2 all))
+      (let [[filename age & [subject]] (clojure.string/split line #"\*")]
+        {:filename filename
          :filetype filetype
-         :age (first reversed)
-         :last-commit (second reversed)}))))
+         :subject subject
+         :age age}))))

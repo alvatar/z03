@@ -122,6 +122,7 @@
                    :text-decoration "none"
                    :display "inline-block"
                    :font-size "16px"}]
+   [:.file-icon {:float "left" :color "#ccc" :margin {:top (u/px 14) :right (u/px 7)}}]
    ;; Colors
    [:.white {:color "white"}]
    [:.bg-aqua {:background-color "#7fdbff"}]
@@ -143,7 +144,7 @@
                  :width (u/px 900)}]
    [:.section-container {:position "absolute"
                          :top 0 :left 0
-                         :height (u/px 280) :width "100%"}]
+                         :min-height (u/px 280) :width "100%"}]
    [:.header-container {:position "absolute" :left 0 :top 0
                         :width "100%" :height (u/px 30)
                         :border {:style "solid" :width "0 0 1 0"}
@@ -165,6 +166,11 @@
                         :background "url(img/editor-bg.png) top left repeat"
                         :background-attachment "fixed"
                         :background-position "top left"}]
+   [:.footer {:margin {:top (u/px 200)}}
+    [:h6 {:float "left" :margin {:top (u/px 0) :right (u/px 20)}}]]
+   [:.files-listing-header {:border {:style "solid" :width "0 0 1 0"}
+                            :margin {:bottom (u/px 0)}}
+    [:h5 {:margin {:bottom (u/px 0)}}]]
    ;; Presenter UI
    [:.presenter-container
     [:.file-list {:position "absolute" :top (u/rem 4)}]

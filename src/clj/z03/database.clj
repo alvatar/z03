@@ -20,7 +20,7 @@
 
 (def db (or (env :database-url)
              ;;"postgres://zapxeakmarafti:O9-vM29dzvG0g2Qo505pTMJTkg@ec2-54-75-233-92.eu-west-1.compute.amazonaws.com:5432/d1heam857nkip0?sslmode=require"
-             "postgresql://localhost:5432/ikidz-dev"))
+             "postgresql://localhost:5432/z03-dev"))
 (def dbc (sql/get-connection db))
 
 (println "Connecting to PostgreSQL:" db)
@@ -30,7 +30,7 @@
   (println "Connecting to PostgreSQL:" db))
 
 (defn connect-to-local []
-  (def db "postgresql://localhost:5432/ikidz-dev")
+  (def db "postgresql://localhost:5432/z03-dev")
   (def dbc (sql/get-connection db))
   (println "Connecting to PostgreSQL:" db))
 

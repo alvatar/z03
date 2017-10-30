@@ -65,6 +65,7 @@
 (defonce ui-state
   {:projects (r/atom nil)
    :commits (r/atom nil)
+   :files (r/atom nil)
    :active-project (r/atom nil)
    :active-commit (r/atom nil)
    :active-file (r/atom nil)})
