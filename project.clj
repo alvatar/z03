@@ -36,6 +36,7 @@
                  ;; Microlibraries
                  [camel-snake-kebab "0.4.0"]
                  [clojure-humanize "0.2.2"]
+                 [clj-ssh "0.5.14"]
                  ;; Cljs
                  [reagent "0.8.0-alpha2"]
                  [datascript "0.16.2"]

@@ -1,5 +1,4 @@
 (ns z03.actions
-  (:gen-class)
   (:require [clojure.pprint :refer [pprint]]
             ;; Environment and configuration
             [environ.core :refer [env]]
@@ -7,7 +6,8 @@
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
             [taoensso.sente.packers.transit :as sente-transit]
             ;; -----
-            [z03.database :as db]))
+            [z03.database :as db]
+            [z03.git :as git]))
 
 ;;
 ;; Sente event handlers
