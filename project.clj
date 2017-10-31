@@ -75,6 +75,8 @@
                            :asset-path "/js/compiled/out/z03"
                            :output-to "resources/public/js/compiled/z03.js"
                            :output-dir "resources/public/js/compiled/out/z03"
+                           :foreign-libs [{:file "lib/gitgraph.js"
+                                           :provides ["gitgraph"]}]
                            :source-map-timestamp true}}
                {:id "min-z03"
                 :source-paths ["src/cljs" "src/cljc"]
@@ -82,6 +84,8 @@
                 :compiler {:main z03.core
                            :output-to "resources/public/js/compiled/z03.js"
                            :output-dir "target/z03"
+                           :foreign-libs [{:file "lib/gitgraph.js"
+                                           :provides ["gitgraph"]}]
                            :source-map-timestamp true
                            :optimizations :advanced
                            :pretty-print false}}

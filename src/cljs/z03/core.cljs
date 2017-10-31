@@ -17,6 +17,7 @@
    [goog.string :as gstring]
    [goog.math :as gmath]
    [goog.math.Rect]
+   [gitgraph]
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
@@ -138,7 +139,7 @@
              [?e :user/name ?n]]
            db-conn)]]])
 
-(defn project-ui []
+(defn project-ui* []
   (let [hover-commit (r/atom false)]
     (fn []
       (let [files @(:files ui-state)
@@ -152,12 +153,14 @@
                                :subject (:subject v) :age (:age v)}))
                           (if current-path (get-in files current-path) files))]
         (if active-commit
-          [:div
-           [:div {:style {:height "280px"}}
-            [:div.center
-             [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
+          [:div {:style {:padding-top "80px" :height "220px"}}
+           [:div {:style {:min-height "230px"
+                          :overflow "auto"
+                          :margin-bottom "-10px"}}
+            [:canvas#gitGraph]]
+           #_[:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
               "Your browser does not support SVG"]
-             [:div {:style {:position "absolute" :top 0 :left 0}}
+           #_[:div {:style {:position "absolute" :top 0 :left 0}}
               [:svg {:width 750 :height 280}
                [:circle {:cx 699 :cy 186
                          :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
@@ -172,7 +175,7 @@
                (when @hover-commit
                  [:g
                   [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
-                  [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
+                  [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]
            [:div
             [:div.grid.files-listing-header
              [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
@@ -207,6 +210,32 @@
             [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
            [project-ui-header]
            [footer]])))))
+
+(defn draw-git-graph []
+  (let [template (js/GitGraph.Template.
+                  (clj->js {:colors ["#333" "#666" "#999"]
+                            :branch {:lineWidth 4
+                                     :spacingX 40}
+                            :commit {:spacingY -100
+                                     :dot {:size 7}}}))
+        gg (js/GitGraph. #js {"template" template
+                              "orientation" "horizontal"
+                              "mode" "compact"})
+        master (. gg branch "master")]
+    (doto gg
+      (.commit)
+      (.commit)
+      (.branch "newtest")
+      (.commit))
+    (.commit master)
+    (.commit master)
+    (.commit master)
+    (.commit master)))
+
+(def project-ui
+  (with-meta project-ui*
+    {:component-did-update draw-git-graph
+     :component-did-mount draw-git-graph}))
 
 (defn app []
   [:div.container
