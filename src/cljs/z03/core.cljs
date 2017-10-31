@@ -54,10 +54,10 @@
 
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
-                          (fn [{:keys [commits files]}]
+                          (fn [{:keys [commits filetree]}]
                             (reset! (:commits ui-state) commits)
                             (reset! (:active-commit ui-state) (first commits))
-                            (reset! (:files ui-state) files))))
+                            (reset! (:files ui-state) filetree))))
 
 ;;
 ;; Event Handlers
@@ -141,58 +141,74 @@
 (defn project-ui []
   (let [hover-commit (r/atom false)]
     (fn []
-      (if-let [active-commit @(:active-commit ui-state)]
-        [:div
-         [:div {:style {:height "280px"}}
-          [:div.center
-           [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
-            "Your browser does not support SVG"]
-           [:div {:style {:position "absolute" :top 0 :left 0}}
-            [:svg {:width 750 :height 280}
-             [:circle {:cx 699 :cy 186
-                       :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
-                       :cursor "pointer"
-                       :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "master"))}]
-             [:circle {:cx 646.5 :cy 186
-                       :r 9 :style {:fill "#888"}
-                       :cursor "pointer"
-                       :on-mouse-over #(reset! hover-commit true)
-                       :on-mouse-out #(reset! hover-commit false)
-                       :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "head1"))}]
-             (when @hover-commit
-               [:g
-                [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
-                [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
-         [:div
-          [:div.grid.files-listing-header
-           [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
-           [:div.col-3>h5.rfloat.link "get presentation link"]]
-          [:div.files-listing
-           (let [grouped (group-by #(= (:filetype %) "directory") @(:files ui-state))
-                 directories (get grouped true)
-                 files (get grouped false)]
-             (concat
-              (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
-                [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                 [:div.file-item.col-3.clickable {:on-click #(js/alert "NAVIGATE: TODO")}
-                  [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
-                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
-                 [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-                 [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
-              (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
-                [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                 [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
-                  [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
-                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
-                 [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-                 [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]]
-         [project-ui-header]
-         [footer]]
-        [:div
-         [:div.center-aligner
-          [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
-         [project-ui-header]
-         [footer]]))))
+      (let [files @(:files ui-state)
+            active-commit @(:active-commit ui-state)
+            current-path (not-empty @(:current-path ui-state))
+            entries (mapv (fn [[k v]]
+                            (log* v)
+                            ;; this element in the structure is a string in the case of folders
+                            (if (string? (first (first v)))
+                              {:filename k :filetype "directory"}
+                              {:filename k :filetype "file"
+                               :subject (:subject v) :age (:age v)}))
+                          (if current-path (get-in files current-path) files))]
+        (log* current-path)
+        (if active-commit
+          [:div
+           [:div {:style {:height "280px"}}
+            [:div.center
+             [:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
+              "Your browser does not support SVG"]
+             [:div {:style {:position "absolute" :top 0 :left 0}}
+              [:svg {:width 750 :height 280}
+               [:circle {:cx 699 :cy 186
+                         :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
+                         :cursor "pointer"
+                         :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "master"))}]
+               [:circle {:cx 646.5 :cy 186
+                         :r 9 :style {:fill "#888"}
+                         :cursor "pointer"
+                         :on-mouse-over #(reset! hover-commit true)
+                         :on-mouse-out #(reset! hover-commit false)
+                         :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "head1"))}]
+               (when @hover-commit
+                 [:g
+                  [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
+                  [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]]]
+           [:div
+            [:div.grid.files-listing-header
+             [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
+             [:div.col-3>h5.rfloat.link "get presentation link"]]
+            [:div.files-listing
+             (let [grouped (group-by #(= (:filetype %) "directory") entries)
+                   directories (get grouped true)
+                   files (get grouped false)]
+               (concat
+                (when current-path
+                  [[:div.grid {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                    [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) butlast)}
+                     [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} ".."]]]])
+                (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
+                  [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                   [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) concat [filename])}
+                    [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
+                    [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
+                   [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+                   [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
+                (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
+                  [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                   [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
+                    [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
+                    [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
+                   [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+                   [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]]
+           [project-ui-header]
+           [footer]]
+          [:div
+           [:div.center-aligner
+            [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
+           [project-ui-header]
+           [footer]])))))
 
 (defn app []
   [:div.container

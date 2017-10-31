@@ -58,8 +58,8 @@
                 :user-id
                 (= user-id))
       (let [commits (git/get-commits user-id (:git-repo project))
-            files (git/get-files-info user-id (:git-repo project) "/" "master")]
-        (?reply-fn {:status :ok :commits commits :files files}))
+            filetree (git/get-tree user-id (:git-repo project) "master")]
+        (?reply-fn {:status :ok :commits commits :filetree filetree}))
       (?reply-fn {:status :error}))))
 
 ;;

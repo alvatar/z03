@@ -71,7 +71,7 @@
          :author author
          :subject subject}))))
 
-(defn get-files-info [user-id repo-dir dir git-ref]
+(defn list-dir [user-id repo-dir dir git-ref]
   (let [results
         (ssh-send user-id
                   (str "cd "
@@ -81,9 +81,29 @@
                        " ./"
                        dir
                        "/ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file && file -b $file; done"))]
-    (for [[line filetype] (partition 2 results)]
-      (let [[filename age & [subject]] (clojure.string/split line #"\*")]
-        {:filename filename
-         :filetype filetype
-         :subject subject
-         :age age}))))
+    (into {}
+          (for [[line filetype] (partition 2 results)]
+            (let [[filename age & [subject]] (clojure.string/split line #"\*")]
+              [filename {:filetype filetype
+                         :subject subject
+                         :age age}])))))
+
+(defn get-tree [user-id repo-dir git-ref]
+  (let [results
+        (ssh-send user-id
+                  (str "cd "
+                       repo-dir
+                       " && git ls-tree --name-only -r "
+                       git-ref
+                       " ./ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file; done"))
+        tree (atom {})]
+    (doseq [line results]
+      (let [[filename age & [subject]] (clojure.string/split line #"\*")
+            path (clojure.string/split filename #"/")]
+        (cond
+          (= (count path) 1)
+          (swap! tree assoc filename {:subject subject :age age})
+          ;;(get-in @tree path)
+          :else
+          (swap! tree update-in (butlast path) assoc (last path) {:subject subject :age age}))))
+    @tree))
