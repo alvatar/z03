@@ -145,14 +145,12 @@
             active-commit @(:active-commit ui-state)
             current-path (not-empty @(:current-path ui-state))
             entries (mapv (fn [[k v]]
-                            (log* v)
                             ;; this element in the structure is a string in the case of folders
                             (if (string? (first (first v)))
                               {:filename k :filetype "directory"}
                               {:filename k :filetype "file"
                                :subject (:subject v) :age (:age v)}))
                           (if current-path (get-in files current-path) files))]
-        (log* current-path)
         (if active-commit
           [:div
            [:div {:style {:height "280px"}}
