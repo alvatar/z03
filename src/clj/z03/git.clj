@@ -112,8 +112,8 @@
 (defn get-fork-points [user-id repo-dir & [refs]]
   (into {}
         (for [[_ branch] (or refs (get-refs user-id repo-dir))]
-          [(first (ssh-send user-id
+          [branch
+           (first (ssh-send user-id
                             (format "cd %s && git merge-base --fork-point %s"
                                     repo-dir
-                                    branch)))
-           branch])))
+                                    branch)))])))

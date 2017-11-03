@@ -58,7 +58,7 @@
                           (fn [{:keys [filetree commits refs fork-points]}]
                             (reset! (:files ui-state) filetree)
                             (reset! (:commits ui-state) commits)
-                            (reset! (:active-commit ui-state) (first commits))
+                            (reset! (:active-commit ui-state) (last commits))
                             (reset! (:refs ui-state) refs)
                             (reset! (:fork-points ui-state) fork-points))))
 
@@ -224,9 +224,8 @@
           gg (js/GitGraph. #js {"template" template
                                 "orientation" "horizontal"
                                 "mode" "compact"})
-          branches (atom {})
           fork-points @(:fork-points ui-state)
-          current-branch (atom "master")]
+          branches (atom {})]
       (doseq [{:keys [hash parents]} commits]
         (let [nparents (count parents)]
           (case nparents
@@ -234,16 +233,23 @@
                 (.commit master)
                 (swap! branches assoc "master" {:head hash :gg-branch master}))
             1 (let [parent (first parents)
-                    new-branch-name (get fork-points parent)
-                    self-fork-point (get fork-points hash)
+                    forks-here (filter (fn [[k v]] (= v parent)) fork-points)
                     [branch-name {:keys [head gg-branch]}] (first (filter (fn [[k {head :head}]] (= head parent)) @branches))]
                 (when-not branch-name (js/alert "Error rendering graph: orphan commit"))
-                (if (or self-fork-point (not new-branch-name))
+                (if (not-empty forks-here)
+                  (let [fork-name (ffirst forks-here)] ; TODO: select the right fork
+                    (if-let [already-branched (get @branches fork-name)] ; We've already branched, go back to where we branched from
+                      (let [branched-from (:branched-from already-branched)
+                            old-branch (get @branches branched-from)
+                            gg-branch (:gg-branch old-branch)]
+                        (swap! branches assoc branched-from {:head hash :gg-branch gg-branch})
+                        (.commit gg-branch))
+                      (let [new-gg-branch (.branch gg-branch fork-name)]
+                        ;;(log* "New BRANCH!!! " fork-name "===" parent "---" hash)
+                        (swap! branches assoc fork-name {:head hash :gg-branch new-gg-branch :branched-from branch-name})
+                        (.commit new-gg-branch))))
                   (do (.commit gg-branch)
-                      (swap! branches assoc branch-name {:head hash :gg-branch gg-branch}))
-                  (let [new-gg-branch (.branch gg-branch new-branch-name)]
-                    (swap! branches assoc new-branch-name {:head hash :gg-branch new-gg-branch})
-                    (.commit new-gg-branch))))
+                      (swap! branches assoc-in [branch-name :head] hash))))
             2 (js/alert "TODO: merge")
             (js/alert "Octopus merges not supported. What are you doing?")))))))
 
