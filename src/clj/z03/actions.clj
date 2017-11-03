@@ -38,18 +38,6 @@
     (?reply-fn {:status :ok :projects projects})
     (?reply-fn {:status :error})))
 
-{"master" {:description "[master] Branding v1"
-           :files [{:file "logo.psd" :last-commit "[master] Branding v1"}
-                   {:file "file1.psd" :last-commit "Simplified logo; reduced number of colors"}
-                   {:file "file2.psd" :last-commit "[master] Branding v1"}
-                   {:file "file3.png" :last-commit "[master] Branding v1"}
-                   {:file "file4.jpg" :last-commit "[master] Branding v1"}
-                   {:file "file5.png" :last-commit "[master] Branding v1"}
-                   {:file "file6.jpg" :last-commit "[master] Branding v1"}]}
- "head1" {:description "Simplified logo; reduced number of colors"
-          :files [{:file "logo.psd" :last-commit "Simplified logo; reduced number of colors"}
-                  {:file "file1.psd" :last-commit "General structure for branding"}]}}
-
 (defmethod -event-msg-handler :project/get-initial-data
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [user-id (get-in ring-req [:session :identity])
@@ -57,9 +45,14 @@
     (if (some-> project
                 :user-id
                 (= user-id))
-      (let [commits (git/get-commits user-id (:git-repo project))
-            filetree (git/get-tree user-id (:git-repo project) "master")]
-        (?reply-fn {:status :ok :commits commits :filetree filetree}))
+      (let [git-repo (:git-repo project)
+            filetree (git/get-tree user-id git-repo "master")
+            commits (git/get-commits user-id git-repo)
+            refs (git/get-refs user-id git-repo)]
+        (?reply-fn {:status :ok
+                    :filetree filetree
+                    :commits commits
+                    :refs refs}))
       (?reply-fn {:status :error}))))
 
 ;;

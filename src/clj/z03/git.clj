@@ -66,7 +66,7 @@
     (for [[_ line] (partition 2 results)]
       (let [[hash parents age author subject] (clojure.string/split line #"<>")]
         {:hash (re-find #"\w+" hash)
-         :parents (clojure.string/split parents #" ")
+         :parents (clojure.string/split parents #"\s+")
          :age age
          :author author
          :subject subject}))))
@@ -100,10 +100,16 @@
     (doseq [line results]
       (let [[filename age & [subject]] (clojure.string/split line #"\*")
             path (clojure.string/split filename #"/")]
-        (cond
-          (= (count path) 1)
+        (if (= (count path) 1)
           (swap! tree assoc filename {:subject subject :age age})
-          ;;(get-in @tree path)
-          :else
           (swap! tree update-in (butlast path) assoc (last path) {:subject subject :age age}))))
     @tree))
+
+(defn get-refs [user-id repo-dir]
+  (let [lines (ssh-send user-id (str "cd " repo-dir " && git for-each-ref"))]
+    (into {}
+          (keep (fn [line]
+                  (let [[commit _ ref] (clojure.string/split line #"\s+")
+                        [_ heads? name] (clojure.string/split ref #"/")]
+                    (when (= heads? "heads") [commit name])))
+                lines))))

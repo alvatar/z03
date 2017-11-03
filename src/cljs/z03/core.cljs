@@ -55,10 +55,11 @@
 
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
-                          (fn [{:keys [commits filetree]}]
+                          (fn [{:keys [filetree commits refs]}]
+                            (reset! (:files ui-state) filetree)
                             (reset! (:commits ui-state) commits)
                             (reset! (:active-commit ui-state) (first commits))
-                            (reset! (:files ui-state) filetree))))
+                            (reset! (:refs ui-state) refs))))
 
 ;;
 ;; Event Handlers
@@ -177,6 +178,7 @@
                   [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
                   [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]
            [:div
+            (log* @(:refs ui-state))
             [:div.grid.files-listing-header
              [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
              [:div.col-3>h5.rfloat.link "get presentation link"]]
