@@ -57,12 +57,12 @@
 ;; Remote Git operations
 ;;
 
-(defn get-commits [user-id repo-dir]
+(defn get-commits [user-id repo-dir & [{:keys [reverse]}]]
   (let [results
         (ssh-send user-id
-                  (str "cd "
-                       repo-dir
-                       " && git rev-list --no-max-parents --all --reverse --color=never --format=format:\"%H<>%P<>%ar<>%an<>%s\""))]
+                  (format "cd %s && git rev-list --no-max-parents --all %s --color=never --format=format:\"%%H<>%%P<>%%ar<>%%an<>%%s\""
+                          repo-dir
+                          (if reverse "--reverse" "")))]
     (for [[_ line] (partition 2 results)]
       (let [[hash parents age author subject] (clojure.string/split line #"<>")]
         {:hash (re-find #"\w+" hash)
@@ -74,13 +74,10 @@
 (defn list-dir [user-id repo-dir dir git-ref]
   (let [results
         (ssh-send user-id
-                  (str "cd "
-                       repo-dir
-                       " && git ls-tree --name-only "
-                       git-ref
-                       " ./"
-                       dir
-                       "/ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file && file -b $file; done"))]
+                  (format "cd %s && git ls-tree --name-only %s ./%s/ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%%ar*%%s\" -- $file && file -b $file; done"
+                          repo-dir
+                          git-ref
+                          dir))]
     (into {}
           (for [[line filetype] (partition 2 results)]
             (let [[filename age & [subject]] (clojure.string/split line #"\*")]
@@ -91,11 +88,9 @@
 (defn get-tree [user-id repo-dir git-ref]
   (let [results
         (ssh-send user-id
-                  (str "cd "
-                       repo-dir
-                       " && git ls-tree --name-only -r "
-                       git-ref
-                       " ./ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%ar*%s\" -- $file; done"))
+                  (format "cd %s && git ls-tree --name-only -r %s ./ | while read file; do git --no-pager log -n 1 --pretty=\"$file*%%ar*%%s\" -- $file; done"
+                          repo-dir
+                          git-ref))
         tree (atom {})]
     (doseq [line results]
       (let [[filename age & [subject]] (clojure.string/split line #"\*")
@@ -113,3 +108,12 @@
                         [_ heads? name] (clojure.string/split ref #"/")]
                     (when (= heads? "heads") [commit name])))
                 lines))))
+
+(defn get-fork-points [user-id repo-dir & [refs]]
+  (into {}
+        (for [[_ branch] (or refs (get-refs user-id repo-dir))]
+          [(first (ssh-send user-id
+                            (format "cd %s && git merge-base --fork-point %s"
+                                    repo-dir
+                                    branch)))
+           branch])))

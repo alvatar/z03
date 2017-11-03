@@ -55,11 +55,12 @@
 
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
-                          (fn [{:keys [filetree commits refs]}]
+                          (fn [{:keys [filetree commits refs fork-points]}]
                             (reset! (:files ui-state) filetree)
                             (reset! (:commits ui-state) commits)
                             (reset! (:active-commit ui-state) (first commits))
-                            (reset! (:refs ui-state) refs))))
+                            (reset! (:refs ui-state) refs)
+                            (reset! (:fork-points ui-state) fork-points))))
 
 ;;
 ;; Event Handlers
@@ -223,37 +224,28 @@
           gg (js/GitGraph. #js {"template" template
                                 "orientation" "horizontal"
                                 "mode" "compact"})
-          heads (atom {"master" (:hash (first commits))})
-          current-branch (atom "master")
-          refs @(:refs ui-state)]
+          branches (atom {})
+          fork-points @(:fork-points ui-state)
+          current-branch (atom "master")]
       (doseq [{:keys [hash parents]} commits]
         (let [nparents (count parents)]
           (case nparents
-            0 (doto gg
-                (.branch "master")
-                (.commit))
+            0 (let [master (.branch gg "master")]
+                (.commit master)
+                (swap! branches assoc "master" {:head hash :gg-branch master}))
             1 (let [parent (first parents)
-                    new-branch (get refs parent)]
-                (when new-branch
-                  (log* "New BRANCH!!! " new-branch)
-                  (log* @(:refs ui-state))
-                  (.branch gg new-branch)
-                  (reset! current-branch new-branch))
-                (do #_(when-not (= @current-branch branch)
-                      (.branch branch)
-                      (reset! current-branch branch))
-                    (swap! heads assoc @current-branch hash)
-                    (log* @current-branch)
-                    (.commit gg))
-                ;;(log* (gstring/format "Error: orphan commit %s is not found. Current heads: %s" (first parents) @heads))
-                )
+                    new-branch-name (get fork-points parent)
+                    self-fork-point (get fork-points hash)
+                    [branch-name {:keys [head gg-branch]}] (first (filter (fn [[k {head :head}]] (= head parent)) @branches))]
+                (when-not branch-name (js/alert "Error rendering graph: orphan commit"))
+                (if (or self-fork-point (not new-branch-name))
+                  (do (.commit gg-branch)
+                      (swap! branches assoc branch-name {:head hash :gg-branch gg-branch}))
+                  (let [new-gg-branch (.branch gg-branch new-branch-name)]
+                    (swap! branches assoc new-branch-name {:head hash :gg-branch new-gg-branch})
+                    (.commit new-gg-branch))))
             2 (js/alert "TODO: merge")
-            (js/alert "Octopus merges not supported. What are you doing?"))))
-      #_(doto gg
-          (.commit)
-          (.commit)
-          (.branch "newtest")
-          (.commit)))))
+            (js/alert "Octopus merges not supported. What are you doing?")))))))
 
 (def project-ui
   (with-meta project-ui*

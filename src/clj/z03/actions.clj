@@ -47,12 +47,14 @@
                 (= user-id))
       (let [git-repo (:git-repo project)
             filetree (git/get-tree user-id git-repo "master")
-            commits (git/get-commits user-id git-repo)
-            refs (git/get-refs user-id git-repo)]
+            commits (git/get-commits user-id git-repo {:reverse true})
+            refs (git/get-refs user-id git-repo)
+            fork-points (git/get-fork-points user-id git-repo refs)]
         (?reply-fn {:status :ok
                     :filetree filetree
                     :commits commits
-                    :refs refs}))
+                    :refs refs
+                    :fork-points fork-points}))
       (?reply-fn {:status :error}))))
 
 ;;

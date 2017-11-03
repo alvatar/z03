@@ -66,6 +66,7 @@
   {:projects (r/atom nil)
    :commits (r/atom nil)
    :refs (r/atom nil)
+   :fork-points (r/atom nil)
    :files (r/atom nil)
    :current-path (r/atom [])
    :active-project (r/atom nil)
