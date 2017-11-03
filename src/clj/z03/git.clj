@@ -62,11 +62,11 @@
         (ssh-send user-id
                   (str "cd "
                        repo-dir
-                       " && git rev-list --no-max-parents --all --color=never --format=format:\"%H<>%P<>%ar<>%an<>%s\""))]
+                       " && git rev-list --no-max-parents --all --reverse --color=never --format=format:\"%H<>%P<>%ar<>%an<>%s\""))]
     (for [[_ line] (partition 2 results)]
       (let [[hash parents age author subject] (clojure.string/split line #"<>")]
         {:hash (re-find #"\w+" hash)
-         :parents (clojure.string/split parents #"\s+")
+         :parents (keep not-empty (clojure.string/split parents #"\s+"))
          :age age
          :author author
          :subject subject}))))

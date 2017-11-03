@@ -178,7 +178,6 @@
                   [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
                   [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]
            [:div
-            (log* @(:refs ui-state))
             [:div.grid.files-listing-header
              [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
              [:div.col-3>h5.rfloat.link "get presentation link"]]
@@ -214,25 +213,47 @@
            [footer]])))))
 
 (defn draw-git-graph []
-  (let [template (js/GitGraph.Template.
-                  (clj->js {:colors ["#333" "#666" "#999"]
-                            :branch {:lineWidth 4
-                                     :spacingX 40}
-                            :commit {:spacingY -100
-                                     :dot {:size 7}}}))
-        gg (js/GitGraph. #js {"template" template
-                              "orientation" "horizontal"
-                              "mode" "compact"})
-        master (. gg branch "master")]
-    (doto gg
-      (.commit)
-      (.commit)
-      (.branch "newtest")
-      (.commit))
-    (.commit master)
-    (.commit master)
-    (.commit master)
-    (.commit master)))
+  (when-let [commits @(:commits ui-state)]
+    (let [template (js/GitGraph.Template.
+                    (clj->js {:colors ["#333" "#666" "#999"]
+                              :branch {:lineWidth 4
+                                       :spacingX 40}
+                              :commit {:spacingY -100
+                                       :dot {:size 7}}}))
+          gg (js/GitGraph. #js {"template" template
+                                "orientation" "horizontal"
+                                "mode" "compact"})
+          heads (atom {"master" (:hash (first commits))})
+          current-branch (atom "master")
+          refs @(:refs ui-state)]
+      (doseq [{:keys [hash parents]} commits]
+        (let [nparents (count parents)]
+          (case nparents
+            0 (doto gg
+                (.branch "master")
+                (.commit))
+            1 (let [parent (first parents)
+                    new-branch (get refs parent)]
+                (when new-branch
+                  (log* "New BRANCH!!! " new-branch)
+                  (log* @(:refs ui-state))
+                  (.branch gg new-branch)
+                  (reset! current-branch new-branch))
+                (do #_(when-not (= @current-branch branch)
+                      (.branch branch)
+                      (reset! current-branch branch))
+                    (swap! heads assoc @current-branch hash)
+                    (log* @current-branch)
+                    (.commit gg))
+                ;;(log* (gstring/format "Error: orphan commit %s is not found. Current heads: %s" (first parents) @heads))
+                )
+            2 (js/alert "TODO: merge")
+            (js/alert "Octopus merges not supported. What are you doing?"))))
+      #_(doto gg
+          (.commit)
+          (.commit)
+          (.branch "newtest")
+          (.commit)))))
 
 (def project-ui
   (with-meta project-ui*
