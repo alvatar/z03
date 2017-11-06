@@ -67,6 +67,12 @@
                             (reset! (:fork-points app-state) fork-points)
                             (draw-git-graph))))
 
+(def get-commit-files
+  (build-standard-request :project/get-commit-files
+                          (fn [{:keys [filetree]}]
+                            (log* filetree)
+                            (reset! (:files app-state) filetree))))
+
 ;;
 ;; Event Handlers
 ;;
@@ -184,11 +190,14 @@
         (let [nparents (count parents)
               commit-data (clj->js {:message subject :sha1 hash :date age :author author
                                     :onClick (fn [commit]
-                                               (reset! (:active-commit app-state)
-                                                       {:author (oget commit "author")
-                                                        :age (oget commit "date")
-                                                        :subject (oget commit "message")
-                                                        :hash (oget commit "sha1")}))})]
+                                               (let [hash (oget commit "sha1")]
+                                                 (get-commit-files {:project @(:active-project app-state)
+                                                                    :commit hash})
+                                                 (reset! (:active-commit app-state)
+                                                         {:author (oget commit "author")
+                                                          :age (oget commit "date")
+                                                          :subject (oget commit "message")
+                                                          :hash hash})))})]
           (case nparents
             0 (let [master (.branch gg "master")]
                 (.commit master commit-data)
@@ -215,6 +224,10 @@
       ;; Scroll to end
       (let [graph-div (js/document.getElementById "graph-container")]
         (oset! graph-div "scrollLeft" (oget graph-div "scrollWidth"))))))
+
+;; Back to Hack
+(defonce _draw-git-graph (atom nil))
+(if @_draw-git-graph (js/setTimeout draw-git-graph 500) (reset! _draw-git-graph true))
 
 (defc project-ui
   < r/reactive

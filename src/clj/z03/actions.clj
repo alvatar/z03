@@ -57,6 +57,18 @@
                     :fork-points fork-points}))
       (?reply-fn {:status :error}))))
 
+(defmethod -event-msg-handler :project/get-commit-files
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (let [user-id (get-in ring-req [:session :identity])
+        project (db/project-get-by :name (:project ?data))
+        commit (:commit ?data)]
+    (if (some-> project
+                :user-id
+                (= user-id))
+      (?reply-fn {:status :ok
+                  :filetree (git/get-tree user-id (:git-repo project) "master")})
+      (?reply-fn {:status :error}))))
+
 ;;
 ;; Sente event router (`event-msg-handler` loop)
 ;;

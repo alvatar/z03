@@ -133,7 +133,7 @@
                    :background-color "#e2e2e2"}
     [:h5 {:margin {:top 0 :left "10px" :right 0 :bottom 0}
           :padding "0"}]]
-   [:.commit-tooltip {:margin {:top "10px"}}]
+   [:.commit-tooltip {:position "fixed" :margin {:top "12px" :left "12px"}}]
    ;; Colors
    [:.white {:color "white"}]
    [:.bg-aqua {:background-color "#7fdbff"}]
