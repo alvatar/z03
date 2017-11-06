@@ -71,4 +71,5 @@
    :current-path (r/atom [])
    :active-project (r/atom nil)
    :active-commit (r/atom nil)
+   :hover-commit (r/atom nil)
    :active-file (r/atom nil)})

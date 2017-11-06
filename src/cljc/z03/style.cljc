@@ -123,6 +123,15 @@
                    :display "inline-block"
                    :font-size "16px"}]
    [:.file-icon {:float "left" :color "#ccc" :margin {:top (u/px 14) :right (u/px 7)}}]
+   [:#graph-container {:min-height "230px"
+                       :overflow "auto"
+                       :margin-bottom "-10px"}]
+   [:#commit-head {:position "sticky" :bottom 0 :left 0
+                   :width "100%"
+                   :height "52px"
+                   :background-color "#e2e2e2"}
+    [:h5 {:margin {:top 0 :left "10px" :right 0 :bottom 0}
+          :padding "0"}]]
    ;; Colors
    [:.white {:color "white"}]
    [:.bg-aqua {:background-color "#7fdbff"}]

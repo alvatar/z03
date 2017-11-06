@@ -6,9 +6,10 @@
    [taoensso.sente :as sente :refer (cb-success?)]
    [taoensso.sente.packers.transit :as sente-transit]
    [reagent.core :as r]
+   [reagent.interop :refer [$]]
    [datascript.core :as d]
    [posh.reagent :as p]
-   [monet.canvas :as canvas]
+   ;;[monet.canvas :as canvas]
    [goog.style]
    [garden.core :refer [css]]
    [garden.units :as u]
@@ -53,14 +54,19 @@
                           (fn [{:keys [projects]}]
                             (reset! (:projects ui-state) projects))))
 
+(declare draw-git-graph)
+
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
                           (fn [{:keys [filetree commits refs fork-points]}]
                             (reset! (:files ui-state) filetree)
                             (reset! (:commits ui-state) commits)
-                            (reset! (:active-commit ui-state) (last commits))
+                            (let [last-commit (last commits)]
+                              (reset! (:active-commit ui-state) last-commit)
+                              (reset! (:hover-commit ui-state) last-commit))
                             (reset! (:refs ui-state) refs)
-                            (reset! (:fork-points ui-state) fork-points))))
+                            (reset! (:fork-points ui-state) fork-points)
+                            (draw-git-graph))))
 
 ;;
 ;; Event Handlers
@@ -141,77 +147,67 @@
              [?e :user/name ?n]]
            db-conn)]]])
 
-(defn project-ui* []
-  (let [hover-commit (r/atom false)]
-    (fn []
-      (let [files @(:files ui-state)
-            active-commit @(:active-commit ui-state)
-            current-path (not-empty @(:current-path ui-state))
-            entries (mapv (fn [[k v]]
-                            ;; this element in the structure is a string in the case of folders
-                            (if (string? (first (first v)))
-                              {:filename k :filetype "directory"}
-                              {:filename k :filetype "file"
-                               :subject (:subject v) :age (:age v)}))
-                          (if current-path (get-in files current-path) files))]
-        (if active-commit
-          [:div {:style {:padding-top "80px" :height "220px"}}
-           [:div {:style {:min-height "230px"
-                          :overflow "auto"
-                          :margin-bottom "-10px"}}
-            [:canvas#gitGraph]]
-           #_[:object {:type "image/svg+xml" :data "/svg/graph-prototype.svg"}
-              "Your browser does not support SVG"]
-           #_[:div {:style {:position "absolute" :top 0 :left 0}}
-              [:svg {:width 750 :height 280}
-               [:circle {:cx 699 :cy 186
-                         :r 11 :style {:fill "#f7a032" :stroke "#666" :stroke-width "3"}
-                         :cursor "pointer"
-                         :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "master"))}]
-               [:circle {:cx 646.5 :cy 186
-                         :r 9 :style {:fill "#888"}
-                         :cursor "pointer"
-                         :on-mouse-over #(reset! hover-commit true)
-                         :on-mouse-out #(reset! hover-commit false)
-                         :on-click #(reset! (:active-commit ui-state) (get @(:commits ui-state) "head1"))}]
-               (when @hover-commit
-                 [:g
-                  [:rect {:x 485 :y 193 :width 200 :height 20 :fill "#fff"}]
-                  [:text {:x 660 :y 208 :font-family "Oswald" :font-size "0.8rem" :text-anchor "end"} "Simplified logo; reduced number of colors"]])]]
-           [:div
-            [:div.grid.files-listing-header
-             [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
-             [:div.col-3>h5.rfloat.link "get presentation link"]]
-            [:div.files-listing
-             (let [grouped (group-by #(= (:filetype %) "directory") entries)
-                   directories (get grouped true)
-                   files (get grouped false)]
-               (concat
-                (when current-path
-                  [[:div.grid {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                    [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) butlast)}
-                     [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} ".."]]]])
-                (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
-                  [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                   [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) concat [filename])}
-                    [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
-                    [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
-                   [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-                   [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
-                (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
-                  [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                   [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
-                    [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
-                    [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
-                   [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-                   [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]]
-           [project-ui-header]
-           [footer]]
-          [:div
-           [:div.center-aligner
-            [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
-           [project-ui-header]
-           [footer]])))))
+(defn project-ui []
+  (let [files @(:files ui-state)
+        active-commit @(:active-commit ui-state)
+        current-path (not-empty @(:current-path ui-state))
+        entries (mapv (fn [[k v]]
+                        ;; this element in the structure is a string in the case of folders
+                        (if (string? (first (first v)))
+                          {:filename k :filetype "directory"}
+                          {:filename k :filetype "file"
+                           :subject (:subject v) :age (:age v)}))
+                      (if current-path (get-in files current-path) files))]
+    [:div {:style {:padding-top "80px" :height "220px"}}
+     [:div#graph-container
+      [:canvas#gitGraph]
+      (when-let [hover-commit @(:hover-commit ui-state)]
+        [:div#commit-head
+         [:div.grid-noGutter
+          [:div.col-6
+           [:h5 (:subject hover-commit)]
+           [:h5 (gstring/format "%s (%s)" (:age hover-commit) (:author hover-commit))]]
+          [:div.col-6
+           [:input.flat-button {:type "submit" :value "add version"}]
+           [:input.flat-button {:type "submit" :value "add commit"}]]]])]
+     (if-not @(:commits ui-state)
+       [:div {:style {:margin-top "-100px"}}
+        [:div.center-aligner
+         [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]]
+       [:div
+        [:div.grid.files-listing-header
+         [:div.col-9>h5.author [:strong (:author active-commit)] " " (:subject active-commit)]
+         [:div.col-3>h5.rfloat.link "get presentation link"]]
+        [:div.files-listing
+         (let [grouped (group-by #(= (:filetype %) "directory") entries)
+               directories (get grouped true)
+               files (get grouped false)]
+           (concat
+            (when current-path
+              [[:div.grid {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+                [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) butlast)}
+                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} ".."]]]])
+            (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
+              [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+               [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) concat [filename])}
+                [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
+                [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
+               [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+               [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
+            (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
+              [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
+               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
+                [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
+                [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
+               [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+               [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]])
+     [project-ui-header]
+     [footer]]
+    #_[:div
+       [:div.center-aligner
+        [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
+       [project-ui-header]
+       [footer]]))
 
 (defn draw-git-graph []
   (when-let [commits @(:commits ui-state)]
@@ -220,17 +216,26 @@
                               :branch {:lineWidth 4
                                        :spacingX 40}
                               :commit {:spacingY -100
-                                       :dot {:size 7}}}))
+                                       :dot {:size 7}
+                                       :shouldDisplayTooltipsInCompactMode false}}))
           gg (js/GitGraph. #js {"template" template
                                 "orientation" "horizontal"
                                 "mode" "compact"})
           fork-points @(:fork-points ui-state)
           branches (atom {})]
-      (doseq [{:keys [hash parents]} commits]
-        (let [nparents (count parents)]
+      (doto (.-canvas gg)
+        (.addEventListener "commit:mouseover" (fn [ev]
+                                                ;; TODO: escape early if commit is set already
+                                                (reset! (:hover-commit ui-state)
+                                                        (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (.-data ev)))]
+                                                          {:author author :age date :subject message :hash sha1})))))
+      (doseq [{:keys [hash subject parents age author]} commits]
+        (let [nparents (count parents)
+              commit-data (clj->js {:message subject :sha1 hash :date age :author author
+                                    :onClick #(js/console.dir %)})]
           (case nparents
             0 (let [master (.branch gg "master")]
-                (.commit master)
+                (.commit master commit-data)
                 (swap! branches assoc "master" {:head hash :gg-branch master}))
             1 (let [parent (first parents)
                     forks-here (filter (fn [[k v]] (= v parent)) fork-points)
@@ -243,20 +248,18 @@
                             old-branch (get @branches branched-from)
                             gg-branch (:gg-branch old-branch)]
                         (swap! branches assoc branched-from {:head hash :gg-branch gg-branch})
-                        (.commit gg-branch))
+                        (.commit gg-branch commit-data))
                       (let [new-gg-branch (.branch gg-branch fork-name)]
-                        ;;(log* "New BRANCH!!! " fork-name "===" parent "---" hash)
                         (swap! branches assoc fork-name {:head hash :gg-branch new-gg-branch :branched-from branch-name})
-                        (.commit new-gg-branch))))
-                  (do (.commit gg-branch)
+                        (.commit new-gg-branch commit-data))))
+                  (do (.commit gg-branch commit-data)
                       (swap! branches assoc-in [branch-name :head] hash))))
             2 (js/alert "TODO: merge")
             (js/alert "Octopus merges not supported. What are you doing?")))))))
 
-(def project-ui
+#_(def project-ui
   (with-meta project-ui*
-    {:component-did-update draw-git-graph
-     :component-did-mount draw-git-graph}))
+    {:component-did-mount draw-git-graph}))
 
 (defn app []
   [:div.container
