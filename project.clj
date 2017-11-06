@@ -4,17 +4,17 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-beta4"]
                  [org.clojure/clojurescript "1.9.946" :scope "provided"]
                  [com.cognitect/transit-clj "0.8.300"]
                  [com.cognitect/transit-cljs "0.8.243"]
                  [environ "1.1.0"]
-                 [ring "1.6.2"]
+                 [ring "1.6.3"]
                  [ring/ring-defaults "0.3.1"]
                  [bk/ring-gzip "0.2.1"]
                  [ring.middleware.logger "0.5.0"]
                  [prone "1.1.4"]
-                 [aleph "0.4.3"]
+                 [aleph "0.4.4"]
                  [compojure "1.6.0"]
                  [com.taoensso/encore "2.92.0"]
                  [com.taoensso/sente "1.11.0"]
@@ -37,10 +37,10 @@
                  [camel-snake-kebab "0.4.0"]
                  [clojure-humanize "0.2.2"]
                  [clj-ssh "0.5.14"]
+                 [binaryage/oops "0.5.6"]
                  ;; Cljs
-                 [reagent "0.8.0-alpha2"]
+                 [rum "0.10.8"]
                  [datascript "0.16.2"]
-                 [posh "0.5.5"]
                  [rm-hull/monet "0.3.0"]
                  [com.andrewmcveigh/cljs-time "0.5.1"]]
 

@@ -1,14 +1,13 @@
 (ns z03.core
   (:require
+   [oops.core :refer [oget oset!]]
    [taoensso.encore :as encore :refer-macros (have have?)]
    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
    [cljs.core.async :as async :refer (<! >! put! take! chan)]
    [taoensso.sente :as sente :refer (cb-success?)]
    [taoensso.sente.packers.transit :as sente-transit]
-   [reagent.core :as r]
-   [reagent.interop :refer [$]]
    [datascript.core :as d]
-   [posh.reagent :as p]
+   [rum.core :as r :refer [defc defcs react]]
    ;;[monet.canvas :as canvas]
    [goog.style]
    [garden.core :refer [css]]
@@ -22,7 +21,7 @@
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
-   [z03.globals :as globals :refer [db-conn display-type window ui-state]]
+   [z03.globals :as globals :refer [db-conn display-type window app-state]]
    [z03.utils :as utils :refer [log*]]
    [z03.client :as client])
   (:require-macros
@@ -52,20 +51,20 @@
 (def get-user-initial-data
   (build-standard-request :user/get-initial-data
                           (fn [{:keys [projects]}]
-                            (reset! (:projects ui-state) projects))))
+                            (reset! (:projects app-state) projects))))
 
 (declare draw-git-graph)
 
 (def get-project-initial-data
   (build-standard-request :project/get-initial-data
                           (fn [{:keys [filetree commits refs fork-points]}]
-                            (reset! (:files ui-state) filetree)
-                            (reset! (:commits ui-state) commits)
+                            (reset! (:files app-state) filetree)
+                            (reset! (:commits app-state) commits)
                             (let [last-commit (last commits)]
-                              (reset! (:active-commit ui-state) last-commit)
-                              (reset! (:hover-commit ui-state) last-commit))
-                            (reset! (:refs ui-state) refs)
-                            (reset! (:fork-points ui-state) fork-points)
+                              (reset! (:active-commit app-state) last-commit)
+                              (reset! (:hover-commit app-state) last-commit))
+                            (reset! (:refs app-state) refs)
+                            (reset! (:fork-points app-state) fork-points)
                             (draw-git-graph))))
 
 ;;
@@ -90,7 +89,9 @@
 ;; UI Components
 ;;
 
-(defn footer []
+(defc footer
+  < r/reactive
+  []
   [:div.footer
    [:div.col-4.center [:div.login-logo [:img {:src "/svg/logo.svg" :width "90px"}]]]
    [:h6 (gstring/format "© %d Metapen Oü" (.getFullYear (js/Date.)))]
@@ -98,30 +99,38 @@
    [:h6 "Terms"]
    [:h6 "Privacy"]])
 
-(defn home-ui-header []
+(defc home-ui-header
+  < r/reactive
+  []
   [:div.header-container
    [:div.header-text
     [:h4.lfloat.clickable {:on-click #(js/alert "User Settings (TODO)")} "Settings"]
     [:h4.rfloat.clickable
-     @(p/q '[:find ?n .
+     "TODO"
+     #_@(p/q '[:find ?n .
              :where [?e]
              [?e :user/name ?n]]
            db-conn)]]])
 
-(defn home-ui []
+(defc home-ui
+  < r/reactive
+  []
   [:div.section-container
-   [:div.project-list
-    (for [{:keys [name description latest-commits]} @(:projects ui-state)]
-      [:div.item.clickable {:key name :on-click (fn []
-                                                  (reset! (:active-project ui-state) name)
-                                                  (get-project-initial-data {:name name}))}
-       [:div {:style {:width "50%" :background-color "50%"}}
-        [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} name]
-        [:h4 {:style {:margin-top "10px"}} description]]
-       [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
-        (for [[c idx] (map vector latest-commits (range))]
-          [:h6 {:key (str name c) :style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
-   [home-ui-header]])
+   (if-let [projects (react (:projects app-state))]
+     [:div.project-list
+      (for [{:keys [name description latest-commits]} projects]
+        [:div.item.clickable {:key name :on-click (fn []
+                                                    (reset! (:active-project app-state) name)
+                                                    (get-project-initial-data {:name name}))}
+         [:div {:style {:width "50%" :background-color "50%"}}
+          [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} name]
+          [:h4 {:style {:margin-top "10px"}} description]]
+         [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
+          (for [[c idx] (map vector latest-commits (range))]
+            [:h6 {:key (str name c) :style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
+     [:div.center-aligner
+      [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]])
+   (home-ui-header)])
 
 (defn logout [& [on-success-fn on-failure-fn]]
   (sente/ajax-lite "/logout"
@@ -133,24 +142,29 @@
                        (when on-success-fn (on-success-fn))
                        (when on-failure-fn (on-failure-fn))))))
 
-(defn project-ui-header []
+(defc project-ui-header
+  < r/reactive
+  []
   [:div.header-container
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
      ;; [:i.fa.fa-undo {:aria-hidden "true"}]
-     [:h4.clickable {:on-click #(reset! (:active-project ui-state) nil)} "Back"]]
+     [:h4.clickable {:on-click #(reset! (:active-project app-state) nil)} "Back"]]
     [:h4.lfloat.clickable {:on-click #(js/alert "Project Settings (TODO)")} "Settings"]
     [:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
     [:h4.rfloat
-     @(p/q '[:find ?n .
+     "TODO"
+     #_@(p/q '[:find ?n .
              :where [?e]
              [?e :user/name ?n]]
            db-conn)]]])
 
-(defn project-ui []
-  (let [files @(:files ui-state)
-        active-commit @(:active-commit ui-state)
-        current-path (not-empty @(:current-path ui-state))
+(defc project-ui
+  < r/reactive
+  []
+  (let [files (react (:files app-state))
+        active-commit (react (:active-commit app-state))
+        current-path (not-empty (react (:current-path app-state)))
         entries (mapv (fn [[k v]]
                         ;; this element in the structure is a string in the case of folders
                         (if (string? (first (first v)))
@@ -159,18 +173,17 @@
                            :subject (:subject v) :age (:age v)}))
                       (if current-path (get-in files current-path) files))]
     [:div {:style {:padding-top "80px" :height "220px"}}
-     [:div#graph-container
-      [:canvas#gitGraph]
-      (when-let [hover-commit @(:hover-commit ui-state)]
-        [:div#commit-head
-         [:div.grid-noGutter
-          [:div.col-6
-           [:h5 (:subject hover-commit)]
-           [:h5 (gstring/format "%s (%s)" (:age hover-commit) (:author hover-commit))]]
-          [:div.col-6
-           [:input.flat-button {:type "submit" :value "add version"}]
-           [:input.flat-button {:type "submit" :value "add commit"}]]]])]
-     (if-not @(:commits ui-state)
+     [:div#graph-container [:canvas#gitGraph]]
+     (when-let [hover-commit (react (:hover-commit app-state))]
+       [:div#commit-head
+        [:div.grid-noGutter
+         [:div.col-6
+          [:h5 (:subject hover-commit)]
+          [:h5 (gstring/format "%s (%s)" (:age hover-commit) (:author hover-commit))]]
+         [:div.col-6
+          [:input.flat-button {:type "submit" :value "add version"}]
+          [:input.flat-button {:type "submit" :value "add commit"}]]]])
+     (if-not (react (:commits app-state))
        [:div {:style {:margin-top "-100px"}}
         [:div.center-aligner
          [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]]
@@ -185,54 +198,57 @@
            (concat
             (when current-path
               [[:div.grid {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-                [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) butlast)}
+                [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path app-state) butlast)}
                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} ".."]]]])
             (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
               [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-               [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path ui-state) concat [filename])}
+               [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path app-state) concat [filename])}
                 [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
                [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
                [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
             (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
               [:div.grid {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file ui-state) filename)}
+               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) filename)}
                 [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
                [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
                [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]])
-     [project-ui-header]
-     [footer]]
-    #_[:div
-       [:div.center-aligner
-        [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]
-       [project-ui-header]
-       [footer]]))
+     (project-ui-header)
+     (footer)]))
 
 (defn draw-git-graph []
-  (when-let [commits @(:commits ui-state)]
+  (when-let [commits @(:commits app-state)]
     (let [template (js/GitGraph.Template.
                     (clj->js {:colors ["#333" "#666" "#999"]
                               :branch {:lineWidth 4
                                        :spacingX 40}
                               :commit {:spacingY -100
                                        :dot {:size 7}
-                                       :shouldDisplayTooltipsInCompactMode false}}))
+                                       ;;:shouldDisplayTooltipsInCompactMode false
+                                       :tooltipHTMLFormatter (fn [commit]
+                                                               (gstring/format "<h6 class=\"commit-tooltip\">%s</h6>" (oget commit "message")))}}))
           gg (js/GitGraph. #js {"template" template
                                 "orientation" "horizontal"
                                 "mode" "compact"})
-          fork-points @(:fork-points ui-state)
+          fork-points @(:fork-points app-state)
           branches (atom {})]
-      (doto (.-canvas gg)
+      (let [graph-div (js/document.getElementById "graph-container")]
+        )
+      (doto (oget gg "canvas")
         (.addEventListener "commit:mouseover" (fn [ev]
-                                                ;; TODO: escape early if commit is set already
-                                                (reset! (:hover-commit ui-state)
-                                                        (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (.-data ev)))]
+                                                (reset! (:hover-commit app-state)
+                                                        (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
                                                           {:author author :age date :subject message :hash sha1})))))
       (doseq [{:keys [hash subject parents age author]} commits]
         (let [nparents (count parents)
               commit-data (clj->js {:message subject :sha1 hash :date age :author author
-                                    :onClick #(js/console.dir %)})]
+                                    :onClick (fn [commit]
+                                               (reset! (:active-commit app-state)
+                                                       {:author (oget commit "author")
+                                                        :age (oget commit "date")
+                                                        :subject (oget commit "message")
+                                                        :hash (oget commit "sha1")}))})]
           (case nparents
             0 (let [master (.branch gg "master")]
                 (.commit master commit-data)
@@ -261,20 +277,22 @@
   (with-meta project-ui*
     {:component-did-mount draw-git-graph}))
 
-(defn app []
+(defc app
+  < r/reactive
+  []
   [:div.container
    (cond
-     @(:active-file ui-state)
-     [file-ui]
-     @(:active-project ui-state)
-     [project-ui]
+     (react (:active-file app-state))
+     (file-ui)
+     (react (:active-project app-state))
+     (project-ui)
      :else
-     [home-ui])])
+     (home-ui))])
 
 ;;
 ;; Init
 ;;
 
-(r/render [app] (js/document.getElementById "app"))
+(r/mount (app) (js/document.getElementById "app"))
 
 (client/start-router!)

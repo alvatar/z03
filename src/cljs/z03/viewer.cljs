@@ -2,9 +2,8 @@
   (:require
    [taoensso.encore :as encore :refer-macros (have have?)]
    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
-   [reagent.core :as r]
+   [rum.core :as r]
    [datascript.core :as d]
-   [posh.reagent :as p]
    [goog.string :as gstring]
    [goog.math :as gmath]
    [goog.math.Rect]
@@ -18,7 +17,7 @@
    ;; -----
    [z03.style]
    [z03.utils :as utils :refer [log*]]
-   [z03.globals :as globals :refer [db-conn display-type window ui-state]])
+   [z03.globals :as globals :refer [db-conn display-type window app-state]])
   (:require-macros
    [garden.def :refer [defkeyframes]]))
 
@@ -26,9 +25,9 @@
   [:div.header-container
    [:div.header-text
     [:div.lfloat {:style {:margin-right "0.5rem"}}
-     [:h4.clickable {:on-click #(reset! (:active-file ui-state) nil)} "Back"]]]])
+     [:h4.clickable {:on-click #(reset! (:active-file app-state) nil)} "Back"]]]])
 
-(defonce file-annotations (r/atom []))
+(defonce file-annotations (atom []))
 
 (defn click-on-annotation [_x _y]
   (let [r 13]
@@ -41,13 +40,13 @@
          @file-annotations)))
 
 (def editable
-  (let [image-scale (r/atom 1)
-        image-x (r/atom 0)
-        image-y (r/atom 0)
-        space-down (r/atom false)
+  (let [image-scale (atom 1)
+        image-x (atom 0)
+        image-y (atom 0)
+        space-down (atom false)
         key-down-listener #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! space-down true))
         key-up-listener #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! space-down false))
-        annotation-edit (r/atom nil)]
+        annotation-edit (atom nil)]
     (with-meta
       (fn []
         [:div {:style {:position "absolute" :top 0 :left 0}}
@@ -67,7 +66,8 @@
               [:h4.rfloat.link {:style {:margin-top 0} :on-click #(reset! annotation-edit nil)} "Save"]
               [:h4.rfloat.link {:style {:margin "0 10px 0 0"} :on-click #(reset! annotation-edit nil)} "Cancel"]]])]])
       {:component-did-mount
-       (fn [this]
+       (fn [this])
+       #_(fn [this]
          (let [node (r/dom-node this)]
            (goog.events/listen js/document goog.events.EventType.KEYDOWN key-down-listener)
            (goog.events/listen js/document goog.events.EventType.KEYUP key-up-listener)

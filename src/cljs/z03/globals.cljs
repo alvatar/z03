@@ -1,8 +1,6 @@
 (ns z03.globals
   (:require
-   [reagent.core :as r]
-   [datascript.core :as d]
-   [posh.reagent :as p]))
+   [datascript.core :as d]))
 
 (goog-define *server-ip* "127.0.0.1")
 
@@ -15,10 +13,9 @@
 
 (def db-schema {:user/name {:db.unique :db.unique/identity}})
 (def db-conn (d/create-conn db-schema))
-(p/posh! db-conn)
 
 ;; Globals will use eid 1
-(p/transact! db-conn [[:db/add 1 :user/name "Alvatar"]])
+(d/transact! db-conn [[:db/add 1 :user/name "Alvatar"]])
 
 ;; (def selected-revision
 ;;   (p/q '[:find ?n .
@@ -62,14 +59,14 @@
 ;; State
 ;;
 
-(defonce ui-state
-  {:projects (r/atom nil)
-   :commits (r/atom nil)
-   :refs (r/atom nil)
-   :fork-points (r/atom nil)
-   :files (r/atom nil)
-   :current-path (r/atom [])
-   :active-project (r/atom nil)
-   :active-commit (r/atom nil)
-   :hover-commit (r/atom nil)
-   :active-file (r/atom nil)})
+(defonce app-state
+  {:projects (atom nil)
+   :commits (atom nil)
+   :refs (atom nil)
+   :fork-points (atom nil)
+   :files (atom nil)
+   :current-path (atom [])
+   :active-project (atom nil)
+   :active-commit (atom nil)
+   :hover-commit (atom nil)
+   :active-file (atom nil)})

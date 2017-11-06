@@ -5,9 +5,8 @@
    [cljs.core.async :as async :refer (<! >! put! take! chan)]
    [taoensso.sente :as sente :refer (cb-success?)]
    [taoensso.sente.packers.transit :as sente-transit]
-   [reagent.core :as r]
+   [rum.core :as r]
    [datascript.core :as d]
-   [posh.reagent :as p]
    [goog.style]
    [garden.core :refer [css]]
    [garden.units :as u]
@@ -17,7 +16,7 @@
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
-   [z03.globals :as globals :refer [db-conn display-type window ui-state]]
+   [z03.globals :as globals :refer [db-conn display-type window app-state]]
    [z03.utils :as utils :refer [log*]]
    [z03.client :as client])
   (:require-macros
@@ -84,7 +83,7 @@
       [:div.file-item-container.col {:key file}
        [:div.file-item.clickable
         (if file
-          [:div.file-thumbnail {:on-click #(reset! (:active-file ui-state) "whatever")
+          [:div.file-thumbnail {:on-click #(reset! (:active-file app-state) "whatever")
                                 :style {:background-image (gstring/format "url(\"%s\")" thumbnail)
                                         :background-position (gstring/format "%spx %spx" offset-x offset-y)}}
            [:h2 {:style {:margin-left "20px"}} file]]
@@ -102,7 +101,7 @@
         monet-canvas (atom nil)]
     [:div.container
      (cond
-       @(:active-file ui-state)
+       @(:active-file app-state)
        [file-ui]
        :else
        [presenter-ui])]))
@@ -111,6 +110,6 @@
 ;; Init
 ;;
 
-(r/render [app] (js/document.getElementById "app"))
+(r/mount app (js/document.getElementById "app"))
 
 (client/start-router!)
