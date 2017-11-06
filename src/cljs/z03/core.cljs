@@ -8,7 +8,7 @@
    [taoensso.sente.packers.transit :as sente-transit]
    [datascript.core :as d]
    [rum.core :as r :refer [defc defcs react]]
-   ;;[monet.canvas :as canvas]
+   [monet.canvas :as canvas]
    [goog.style]
    [garden.core :refer [css]]
    [garden.units :as u]
@@ -22,7 +22,7 @@
    [z03.style]
    [z03.viewer :refer [file-ui]]
    [z03.globals :as globals :refer [db-conn display-type window app-state]]
-   [z03.utils :as utils :refer [log*]]
+   [z03.utils :as utils :refer [log* log**]]
    [z03.client :as client])
   (:require-macros
    [garden.def :refer [defkeyframes]]))
@@ -60,8 +60,8 @@
                           (fn [{:keys [filetree commits refs fork-points]}]
                             (reset! (:files app-state) filetree)
                             (reset! (:commits app-state) commits)
-                            (let [last-commit (last commits)]
-                              (reset! (:active-commit app-state) last-commit)
+                            #_(let [last-commit (last commits)]
+                              ;;(reset! (:active-commit app-state) last-commit)
                               (reset! (:hover-commit app-state) last-commit))
                             (reset! (:refs app-state) refs)
                             (reset! (:fork-points app-state) fork-points)
@@ -70,7 +70,6 @@
 (def get-commit-files
   (build-standard-request :project/get-commit-files
                           (fn [{:keys [filetree]}]
-                            (log* filetree)
                             (reset! (:files app-state) filetree))))
 
 ;;
@@ -100,7 +99,7 @@
   []
   [:div.footer
    [:div.col-4.center [:div.login-logo [:img {:src "/svg/logo.svg" :width "90px"}]]]
-   [:h6 (gstring/format "© %d Metapen Oü" (.getFullYear (js/Date.)))]
+   [:h6 (gstring/format "© %d Metapen Ltd." (.getFullYear (js/Date.)))]
    [:h6 "Contact"]
    [:h6 "Terms"]
    [:h6 "Privacy"]])
@@ -167,37 +166,39 @@
 
 (defn draw-git-graph []
   (when-let [commits @(:commits app-state)]
-    (let [template (js/GitGraph.Template.
-                    (clj->js {:colors ["#333" "#666" "#999"]
-                              :branch {:lineWidth 4
-                                       :spacingX 40}
-                              :commit {:spacingY -100
-                                       :dot {:size 7}
-                                       ;;:shouldDisplayTooltipsInCompactMode false
-                                       :tooltipHTMLFormatter (fn [commit]
-                                                               (gstring/format "<h6 class=\"commit-tooltip\">%s</h6>" (oget commit "message")))}}))
-          gg (js/GitGraph. #js {"template" template
+    (let [gg (js/GitGraph. #js {"template" (js/GitGraph.Template.
+                                            (clj->js {:colors ["#333" "#666" "#999"]
+                                                      :branch {:lineWidth 4
+                                                               :spacingX 40}
+                                                      :commit {:spacingY -100
+                                                               :dot {:size 7}
+                                                               :tooltipHTMLFormatter (fn [commit]
+                                                                                       (gstring/format "<h6 class=\"commit-tooltip\">%s (%s)</h6>"
+                                                                                                       (oget commit "message")
+                                                                                                       (oget commit "date")))}}))
                                 "orientation" "horizontal"
                                 "mode" "compact"})
           fork-points @(:fork-points app-state)
           branches (atom {})]
-      (doto (oget gg "canvas")
-        (.addEventListener "commit:mouseover" (fn [ev]
-                                                (reset! (:hover-commit app-state)
-                                                        (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
-                                                          {:author author :age date :subject message :hash sha1})))))
+      #_(.addEventListener (oget gg "canvas")
+                         "commit:mouseover"
+                         (fn [ev]
+                           (reset! (:hover-commit app-state)
+                                   (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
+                                     {:author author :age date :subject message :hash sha1}))))
       (doseq [{:keys [hash subject parents age author]} commits]
         (let [nparents (count parents)
               commit-data (clj->js {:message subject :sha1 hash :date age :author author
                                     :onClick (fn [commit]
                                                (let [hash (oget commit "sha1")]
+                                                 (reset! (:files app-state) nil)
                                                  (get-commit-files {:project @(:active-project app-state)
                                                                     :commit hash})
-                                                 (reset! (:active-commit app-state)
-                                                         {:author (oget commit "author")
-                                                          :age (oget commit "date")
-                                                          :subject (oget commit "message")
-                                                          :hash hash})))})]
+                                                 (reset! (:active-commit app-state) commit
+                                                         #_{:author (oget commit "author")
+                                                            :age (oget commit "date")
+                                                            :subject (oget commit "message")
+                                                            :hash hash})))})]
           (case nparents
             0 (let [master (.branch gg "master")]
                 (.commit master commit-data)
@@ -221,11 +222,20 @@
                       (swap! branches assoc-in [branch-name :head] hash))))
             2 (js/alert "TODO: merge")
             (js/alert "Octopus merges not supported. What are you doing?"))))
+      #_(when-let [ac @(:active-commit app-state)]
+        (let [ctx (.getContext (oget gg "canvas") "2d")]
+          (doto ctx
+            (.beginPath)
+            (.arc (oget ac "x") (oget ac "y") 10 0 7)
+            (.stroke))))
       ;; Scroll to end
       (let [graph-div (js/document.getElementById "graph-container")]
         (oset! graph-div "scrollLeft" (oget graph-div "scrollWidth"))))))
 
 ;; Back to Hack
+#_(defonce _clicked-commit (add-watch clicked-commit :clicked-commit
+                                    (fn [key atom old-state new-state]
+                                      (draw-git-graph))))
 (defonce _draw-git-graph (atom nil))
 (if @_draw-git-graph (js/setTimeout draw-git-graph 500) (reset! _draw-git-graph true))
 
@@ -243,29 +253,40 @@
                            :subject (:subject v) :age (:age v)}))
                       (if current-path (get-in files current-path) files))]
     [:div {:style {:padding-top "80px" :height "220px"}}
-     [:div#graph-container [:canvas#gitGraph]]
-     (when-let [hover-commit (react (:hover-commit app-state))]
+     [:div#graph-container
+      [:canvas#gitGraph]
+      (when active-commit
+        [:div {:style {:position "relative"
+                       :pointer-events "none"
+                       :left (oget active-commit "x")
+                       :top (oget active-commit "y")
+                       :width "24px"
+                       :margin-top "-214.5px"
+                       :margin-left "-43.5px"}}
+         [:svg [:circle {:cx 50 :cy 50 :r 10 :stroke "#008cb7" :stroke-width 3 :fill-opacity 0.0}]]])]
+     #_(when-let [hover-commit (react (:hover-commit app-state))]
        [:div#commit-head
         [:div.grid-noGutter
-         [:div.col-6
+         #_[:div.col-6
           [:h5 (:subject hover-commit)]
           [:h5 (gstring/format "%s (%s)" (:age hover-commit) (:author hover-commit))]]
          [:div.col-6
           [:input.flat-button {:type "submit" :value "add version"}]
           [:input.flat-button {:type "submit" :value "add commit"}]]]])
-     (if-not (react (:commits app-state))
+     (if-not files
        [:div
         [:div.center-aligner
          [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]]
        [:div
-        [:div.grid-noGutter.files-listing-header
-         [:div.col-9 [:h5.author
-                      [:strong (:author active-commit)] " " (:subject active-commit)]]
-         [:div.col-3 [:h5.rfloat.link "get presentation link"]]]
+        (if active-commit
+          [:div.grid-noGutter.files-listing-header
+           [:div.col-9 [:h5.author [:strong (oget active-commit "author")] " " (oget active-commit "message")]]
+           [:div.col-3 [:h5.rfloat (oget active-commit "date")]]]
+          [:h5 "Please select version in graph"])
         [:div.files-listing
          (let [grouped (group-by #(= (:filetype %) "directory") entries)
                directories (get grouped true)
-               files (get grouped false)]
+               file-rows (get grouped false)]
            (concat
             (when current-path
               [[:div.grid-noGutter {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
@@ -278,7 +299,7 @@
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
                [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
                [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
-            (for [{:keys [filename filetype age subject]} (sort-by :filename files)]
+            (for [{:keys [filename filetype age subject]} (sort-by :filename file-rows)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
                [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) filename)}
                 [:i.fa.fa-file.file-icon {:aria-hidden "true"}]

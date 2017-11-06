@@ -66,7 +66,7 @@
                 :user-id
                 (= user-id))
       (?reply-fn {:status :ok
-                  :filetree (git/get-tree user-id (:git-repo project) "master")})
+                  :filetree (git/get-tree user-id (:git-repo project) commit)})
       (?reply-fn {:status :error}))))
 
 ;;

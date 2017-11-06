@@ -16,6 +16,10 @@
   (when (= globals/*env* "dev")
     (js/console.log (clojure.string/join "" (map str objs)))))
 
+(defn log** [obj]
+  (when (= globals/*env* "dev")
+    (js/console.dir obj)))
+
 (defn find-in [col id] (first (keep-indexed #(when (= (:id %2) id) %1) col)))
 
 (defn some-update [predicate f coll]
