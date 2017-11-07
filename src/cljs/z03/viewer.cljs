@@ -112,13 +112,15 @@
   (let [image-scale (::image-scale _state)
         image-x (::image-x _state)
         image-y (::image-y _state)
-        space-down (::space-down _state)]
+        space-down (::space-down _state)
+        ;; TODO: user, project, commit
+        file-url (gstring/format "/u/%s/%s/blob/%s/%s" "thor" @(:active-project app-state) "master" @(:active-file app-state))]
     [:div.limit
      [:div {:style {:position "absolute" :top (react image-y) :left (react image-x)}}
       [:img#object1 {:style {:max-width "100%" :max-height "100%"
                              :object-fit "contain"
                              :transform (gstring/format "scale(%s)" (react image-scale))}
-                     :src "/img/template_ios7.png"}]
+                     :src file-url}]
       [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
        [:svg {:width "100%" :height "100%"
               :style {:transform (gstring/format "scale(%s)" (react image-scale))}}

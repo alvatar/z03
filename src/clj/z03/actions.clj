@@ -40,7 +40,7 @@
 
 (defmethod -event-msg-handler :project/get-initial-data
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (let [{user-id :user-id} (get-in ring-req [:session :identity])
+  (let [{user-id :id} (get-in ring-req [:session :identity])
         project (db/project-get-by :name (:name ?data))]
     (if (some-> project
                 :user-id
@@ -59,7 +59,7 @@
 
 (defmethod -event-msg-handler :project/get-commit-files
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (let [{user-id :user-id} (get-in ring-req [:session :identity])
+  (let [{user-id :id} (get-in ring-req [:session :identity])
         project (db/project-get-by :name (:project ?data))
         commit (:commit ?data)]
     (if (some-> project

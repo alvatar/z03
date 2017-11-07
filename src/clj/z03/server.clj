@@ -6,7 +6,7 @@
             [taoensso.timbre :as log]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.gzip :refer [wrap-gzip]]
-            [ring.util.response :refer [response redirect content-type]]
+            [ring.util.response :refer [response redirect content-type file-response]]
             [ring.middleware.defaults :refer :all]
             [ring.middleware.stacktrace :as trace]
             [prone.middleware :as prone]
@@ -74,7 +74,9 @@
 
 (defroutes app
   (GET "/" req (render (html/index) req))
-  (GET "/u" req #(redirect (get-in % [:session :identity] "/login")))
+  (GET "/u" req #(redirect (or (when-let [u (:user-name (get-in % [:session :identity]))]
+                                 (str "/u/" u))
+                               "/login")))
   (GET "/u/:user" [user :as req] (user-home user req))
   (GET "/u/:user/:project" [user project :as req]
        (authenticated user
@@ -89,8 +91,8 @@
   (GET "/u/:user/:project/blob/:commit/:file" [user project commit file :as req]
        (authenticated user
                       {:status 200
-                       :headers {"Content-Type" "text/plain"}
-                       :body (str {:user user :project project :commit commit :file file})}))
+                       :headers {}
+                       :body (io/input-stream (io/resource "public/img/template_ios7.png"))}))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
