@@ -93,11 +93,11 @@
                           git-ref))
         tree (atom {})]
     (doseq [line results]
-      (let [[filename age & [subject]] (clojure.string/split line #"\*")
-            path (clojure.string/split filename #"/")]
+      (let [[pathstr age & [subject]] (clojure.string/split line #"\*")
+            path (clojure.string/split pathstr #"/")]
         (if (= (count path) 1)
-          (swap! tree assoc filename {:subject subject :age age})
-          (swap! tree update-in (butlast path) assoc (last path) {:subject subject :age age}))))
+          (swap! tree assoc pathstr {:subject subject :age age :full-path pathstr})
+          (swap! tree update-in (butlast path) assoc (last path) {:subject subject :age age :full-path pathstr}))))
     @tree))
 
 (defn get-refs [user-id repo-dir]

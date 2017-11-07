@@ -122,17 +122,29 @@
                    :text-decoration "none"
                    :display "inline-block"
                    :font-size "16px"}]
+   [:.graph-button {:background-color light-grey
+                    :color dark-grey
+                    :cursor "pointer"
+                    :font-family ["Oswald" "sans-serif"]
+                    :border "none"
+                    :width "150px"
+                    :padding "5px 0"
+                    :margin "2px 0"
+                    :text-align "center"
+                    :text-decoration "none"
+                    :display "inline-block"
+                    :font-size "16px"}]
    [:.file-icon {:float "left" :color "#ccc" :margin {:top (u/px 14) :right (u/px 7)}}]
    [:#graph-container {:min-height "230px"
                        :overflow "auto"
                        :margin-bottom "-10px"}]
-   [:#commit-head {;;:position "sticky" :bottom 0 :left 0
-                   :margin-top "10px"
-                   :width "100%"
-                   ;;:height "49px"
-                   :background-color "#e2e2e2"}
-    [:h5 {:margin {:top 0 :left "10px" :right 0 :bottom 0}
-          :padding "0"}]]
+   [:.commit-marker {:position "relative"
+                     ;;:pointer-events "none"
+                     :width "140px"
+                     :margin-top "-214.5px"
+                     :margin-left "-43.5px"}
+    [:h6 {:margin {:top 0 :bottom 0}}]]
+   [:.commit-actions-container {:margin-left "-25px"}]
    [:.commit-tooltip {:position "fixed" :margin {:top "12px" :left "12px"}}]
    ;; Colors
    [:.white {:color "white"}]
@@ -174,7 +186,7 @@
    [:.editor-container {:position "fixed"
                         :top 0 :left 0
                         :height "100%" :width "100%"
-                        :background "url(img/editor-bg.png) top left repeat"
+                        :background "url(/img/editor-bg.png) top left repeat"
                         :background-attachment "fixed"
                         :background-position "top left"}]
    [:.footer {:margin {:top (u/px 200)}}

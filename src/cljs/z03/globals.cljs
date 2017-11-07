@@ -68,4 +68,6 @@
    :current-path (atom [])
    :active-project (atom nil)
    :active-commit (atom nil)
-   :active-file (atom nil)})
+   :active-file (atom "something")
+   ;;(atom nil)
+   })

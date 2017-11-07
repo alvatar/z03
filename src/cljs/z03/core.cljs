@@ -222,12 +222,6 @@
                       (swap! branches assoc-in [branch-name :head] hash))))
             2 (js/alert "TODO: merge")
             (js/alert "Octopus merges not supported. What are you doing?"))))
-      #_(when-let [ac @(:active-commit app-state)]
-        (let [ctx (.getContext (oget gg "canvas") "2d")]
-          (doto ctx
-            (.beginPath)
-            (.arc (oget ac "x") (oget ac "y") 10 0 7)
-            (.stroke))))
       ;; Scroll to end
       (let [graph-div (js/document.getElementById "graph-container")]
         (oset! graph-div "scrollLeft" (oget graph-div "scrollWidth"))))))
@@ -244,35 +238,33 @@
   []
   (let [files (react (:files app-state))
         active-commit (react (:active-commit app-state))
+        commit-is-ref (and active-commit
+                           (some (let [h (oget active-commit "sha1")] #(= h %))
+                                 (keys (react (:refs app-state)))))
         current-path (not-empty (react (:current-path app-state)))
         entries (mapv (fn [[k v]]
-                        ;; this element in the structure is a string in the case of folders
+                        ;; This element in the structure is a string in the case of folders
                         (if (string? (first (first v)))
                           {:filename k :filetype "directory"}
                           {:filename k :filetype "file"
-                           :subject (:subject v) :age (:age v)}))
+                           :subject (:subject v) :age (:age v) :full-path (:full-path v)}))
                       (if current-path (get-in files current-path) files))]
     [:div {:style {:padding-top "80px" :height "220px"}}
      [:div#graph-container
       [:canvas#gitGraph]
       (when active-commit
-        [:div {:style {:position "relative"
-                       :pointer-events "none"
-                       :left (oget active-commit "x")
-                       :top (oget active-commit "y")
-                       :width "24px"
-                       :margin-top "-214.5px"
-                       :margin-left "-43.5px"}}
-         [:svg [:circle {:cx 50 :cy 50 :r 10 :stroke "#008cb7" :stroke-width 3 :fill-opacity 0.0}]]])]
-     #_(when-let [hover-commit (react (:hover-commit app-state))]
-       [:div#commit-head
-        [:div.grid-noGutter
-         #_[:div.col-6
-          [:h5 (:subject hover-commit)]
-          [:h5 (gstring/format "%s (%s)" (:age hover-commit) (:author hover-commit))]]
-         [:div.col-6
-          [:input.flat-button {:type "submit" :value "add version"}]
-          [:input.flat-button {:type "submit" :value "add commit"}]]]])
+        [:div.commit-marker {:style {:left (oget active-commit "x")
+                                     :top (oget active-commit "y")}}
+         [:svg {:pointer-events "none" :height 70 :width 70} [:circle {:cx 50 :cy 50 :r 10 :stroke "#333" :stroke-width 3 :fill-opacity 0.0}]]
+         (if commit-is-ref
+           [:div.commit-actions-container
+            [:h6 "Working version"]
+            [:button.graph-button "add file"]
+            [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]
+            [:button.graph-button "new revision" [:i.fa.fa-arrow-right {:style {:margin-left "4px" } :aria-hidden "true"}]]]
+           [:div.commit-actions-container
+            [:h6 "No open comments"]
+            [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]])])]
      (if-not files
        [:div
         [:div.center-aligner
@@ -292,16 +284,17 @@
               [[:div.grid-noGutter {:key "dir-up" :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
                 [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path app-state) butlast)}
                  [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} ".."]]]])
-            (for [{:keys [filename filetype age subject]} (sort-by :filename directories)]
+            (for [{:keys [filename]} (sort-by :filename directories)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
                [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path app-state) concat [filename])}
                 [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
-               [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-               [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])
-            (for [{:keys [filename filetype age subject]} (sort-by :filename file-rows)]
+               ;;[:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
+               ;;[:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]
+               ])
+            (for [{:keys [filename filetype age subject full-path]} (sort-by :filename file-rows)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
-               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) filename)}
+               [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) full-path)}
                 [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
                [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
