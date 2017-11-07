@@ -188,7 +188,12 @@
                         :height "100%" :width "100%"
                         :background "url(/img/editor-bg.png) top left repeat"
                         :background-attachment "fixed"
-                        :background-position "top left"}]
+                        :background-position "top left"}
+    [:.limit {:position "absolute"
+              :width "100%" :height "100%"
+              :display "block"
+              :overflow "hidden"
+              :top (u/px 30)}]]
    [:.footer {:margin {:top (u/px 200)}}
     [:h6 {:float "left" :margin {:top (u/px 0) :right (u/px 20)}}]]
    [:.files-listing-header {:border {:style "solid" :width "0 0 1 0"}

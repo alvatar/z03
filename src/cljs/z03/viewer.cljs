@@ -1,5 +1,6 @@
 (ns z03.viewer
   (:require
+   [oops.core :refer [oget oset!]]
    [taoensso.encore :as encore :refer-macros (have have?)]
    [taoensso.timbre :as timbre :refer-macros (tracef debugf infof warnf errorf)]
    [rum.core :as r :refer [defc defcs react]]
@@ -16,7 +17,7 @@
    [goog.fx.Dragger.EventType]
    ;; -----
    [z03.style]
-   [z03.utils :as utils :refer [log*]]
+   [z03.utils :as utils :refer [log* log**]]
    [z03.globals :as globals :refer [db-conn display-type window app-state]])
   (:require-macros
    [garden.def :refer [defkeyframes]]))
@@ -54,7 +55,19 @@
   {:did-mount
    (fn [_state]
      (let [comp (:rum/react-component _state)
-           node (js/ReactDOM.findDOMNode comp)]
+           node (js/ReactDOM.findDOMNode comp)
+           object1 (js/document.getElementById "object1")]
+       (oset! object1
+              "onload"
+              (fn []
+                (reset! (::image-x _state) (/ (- (oget js/window "innerWidth")
+                                                 (oget object1 "width"))
+                                              2))
+                (reset! (::image-y _state) (gmath/clamp (/ (- (oget js/window "innerHeight")
+                                                              (oget object1 "height"))
+                                                           2)
+                                                        0
+                                                        js/Number.MAX_SAFE_INTEGER))))
        (reset! (::key-down-listener _state)
                (goog.events/listen js/document goog.events.EventType.KEYDOWN
                                    #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! (::space-down _state) true))))
@@ -90,33 +103,36 @@
      _state)
    :will-unmount
    (fn [_state]
-     (goog.events/unlistenByKey js/document goog.events.EventType.KEYUP @(::key-up-listener _state))
-     (goog.events/unlistenByKey js/document goog.events.EventType.KEYDOWN @(::key-down-listener _state))
-     (goog.events/unlistenByKey js/document goog.events.EventType.MOUSEWHEEL @(::mouse-wheel-handler _state))
-     (goog.events/unlistenByKey js/document goog.events.EventType.MOUSEDOWN @(::mouse-down-handler _state))
+     (goog.events/unlistenByKey @(::key-up-listener _state))
+     (goog.events/unlistenByKey @(::key-down-listener _state))
+     (goog.events/unlistenByKey @(::mouse-wheel-handler _state))
+     (goog.events/unlistenByKey @(::mouse-down-handler _state))
      _state)}
   [_state]
   (let [image-scale (::image-scale _state)
         image-x (::image-x _state)
         image-y (::image-y _state)
         space-down (::space-down _state)]
-    [:div {:style {:position "absolute" :top 0 :left 0}}
-     [:img {:style {:transform (gstring/format "scale(%s)" (react image-scale))}
-            :src "/img/template_ios7.png"}]
-     [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
-      [:svg {:width "100%" :height "100%"
-             :style {:transform (gstring/format "scale(%s)" (react image-scale))}}
-       (for [{:keys [id x y]} (react file-annotations)]
-         [:circle {:key (rand-int 999999999) ; TODO crap
-                   :cx x :cy y
-                   :r 10 :style {:fill "#f7a032" :stroke "rgba(255, 124, 43, 0.3)" :stroke-width "3px"}
-                   :cursor "pointer"}])]
-      (when-let [{:keys [x y]} (react (::annotation-edit _state))]
-        [:div {:style {:position "absolute" :left x :top y}}
-         [:textarea {:rows 4 :cols 50}]
-         [:div
-          [:h4.rfloat.link {:style {:margin-top 0} :on-click #(reset! (::annotation-edit _state) nil)} "Save"]
-          [:h4.rfloat.link {:style {:margin "0 10px 0 0"} :on-click #(reset! (::annotation-edit _state) nil)} "Cancel"]]])]]))
+    [:div.limit
+     [:div {:style {:position "absolute" :top (react image-y) :left (react image-x)}}
+      [:img#object1 {:style {:max-width "100%" :max-height "100%"
+                             :object-fit "contain"
+                             :transform (gstring/format "scale(%s)" (react image-scale))}
+                     :src "/img/template_ios7.png"}]
+      [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
+       [:svg {:width "100%" :height "100%"
+              :style {:transform (gstring/format "scale(%s)" (react image-scale))}}
+        (for [{:keys [id x y]} (react file-annotations)]
+          [:circle {:key (rand-int 999999999) ; TODO crap
+                    :cx x :cy y
+                    :r 10 :style {:fill "#f7a032" :stroke "rgba(255, 124, 43, 0.3)" :stroke-width "3px"}
+                    :cursor "pointer"}])]
+       (when-let [{:keys [x y]} (react (::annotation-edit _state))]
+         [:div {:style {:position "absolute" :left x :top y}}
+          [:textarea {:rows 4 :cols 50}]
+          [:div
+           [:h4.rfloat.link {:style {:margin-top 0} :on-click #(reset! (::annotation-edit _state) nil)} "Save"]
+           [:h4.rfloat.link {:style {:margin "0 10px 0 0"} :on-click #(reset! (::annotation-edit _state) nil)} "Cancel"]]])]]]))
 
 (defc file-viewer
   []
@@ -126,7 +142,6 @@
 (defc file-ui
   < r/reactive
   []
-  (log* (react (:active-file app-state)))
   [:div
    (file-viewer)
    (file-ui-header)])

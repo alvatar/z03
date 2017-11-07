@@ -47,15 +47,20 @@
 ;; HTTP Handlers
 ;;
 
-(defmacro authenticated [f]
-  `(fn [req#] (if-not (authenticated? req#) (throw-unauthorized) ~f)))
+(defmacro authenticated [user f]
+  `(fn [req#]
+     (if-not (and (authenticated? req#)
+                  (= (:user-name (get-in req# [:session :identity]))
+                     ~user))
+       (throw-unauthorized)
+       ~f)))
 
 (defn login-handler [req]
   (let [{:keys [session params]} req
         {:keys [user password]} params]
-    (if-let [user-id (:id (db/user-authenticate user password))]
-      (let [updated-session (assoc session :identity user-id)
-            next-url (get-in req [:query-params "next"] (str "/u/" user-id))]
+    (if-let [user-identity (select-keys (db/user-authenticate user password) [:id :user-name])]
+      (let [updated-session (assoc session :identity user-identity)
+            next-url (get-in req [:query-params "next"] (str "/u/" (:user-name user-identity)))]
         (assoc (redirect next-url) :session updated-session))
       (redirect (format "/login%s" (when-let [qs (:query-string req)] (str "?" qs)))))))
 
@@ -63,14 +68,29 @@
   (let [{:keys [session params]} req]
     (-> (redirect "/") (assoc :session (dissoc session :identity)))))
 
-(defn user-home [id req]
-  (authenticated
-   (render (html/user-home id) req)))
+(defn user-home [user req]
+  (authenticated user
+                 (render (html/user-home user) req)))
 
 (defroutes app
   (GET "/" req (render (html/index) req))
   (GET "/u" req #(redirect (get-in % [:session :identity] "/login")))
-  (GET "/u/:id" [id :as req] (user-home id req))
+  (GET "/u/:user" [user :as req] (user-home user req))
+  (GET "/u/:user/:project" [user project :as req]
+       (authenticated user
+                      {:status 200
+                       :headers {"Content-Type" "text/plain"}
+                       :body (str {:user user :project project})}))
+  (GET "/u/:user/:project/tree/:commit" [user project commit :as req]
+       (authenticated user
+                      {:status 200
+                       :headers {"Content-Type" "text/plain"}
+                       :body (str {:user user :project project :commit commit})}))
+  (GET "/u/:user/:project/blob/:commit/:file" [user project commit file :as req]
+       (authenticated user
+                      {:status 200
+                       :headers {"Content-Type" "text/plain"}
+                       :body (str {:user user :project project :commit commit :file file})}))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
