@@ -46,9 +46,11 @@
   (r/local 0 ::image-x)
   (r/local 0 ::image-y)
   (r/local false ::space-down)
+  (r/local nil ::annotation-edit)
   (r/local nil ::key-down-listener)
   (r/local nil ::key-up-listener)
-  (r/local nil ::annotation-edit)
+  (r/local nil ::mouse-wheel-handler)
+  (r/local nil ::mouse-down-handler)
   {:did-mount
    (fn [_state]
      (let [comp (:rum/react-component _state)
@@ -59,49 +61,52 @@
        (reset! (::key-up-listener _state)
                (goog.events/listen js/document goog.events.EventType.KEYUP
                                    #(when (= (.-keyCode %) goog.events.KeyCodes.SPACE) (reset! (::space-down _state) false))))
-       (goog.events/listen (goog.events.MouseWheelHandler. node)
-                           goog.events.MouseWheelHandler.EventType.MOUSEWHEEL
-                           (fn [e] (swap! (::image-scale _state) #(gmath/clamp (+ % (* 0.001 (.-deltaY e))) 1.0 4.0))))
-       (goog.events/listen node
-                           goog.events.EventType/MOUSEDOWN
-                           (fn [e]
-                             (let [x (.-offsetX e) y (.-offsetY e)]
-                               (cond @(::space-down _state)
-                                     (let [drag (fx/Dragger. node)]
-                                       (.setLimits drag (goog.math.Rect. 0 0 400 400))
-                                       #_(.addEventListener drag
-                                                            goog.fx.Dragger.EventType/DRAG
-                                                            (fn [d]
-                                                              (let [dx (-> d .-dragger .-deltaX)
-                                                                    dy (-> d .-dragger .-deltaY)]
-                                                                (log* (str "x: " dx " y: " dy))
-                                                                (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
-                                                                (swap! image-y (fn [y] (gmath/clamp dy 0 y))))))
-                                       (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
-                                       (.startDrag drag e))
-                                     (not @(::annotation-edit _state))
-                                     (if-let [ann (click-on-annotation x y)]
-                                       (reset! (::annotation-edit _state) {:x (+ 7 (:x ann)) :y (+ 7 (:y ann))})
-                                       (swap! file-annotations conj {:x x :y y :id (rand-int 99999999)})))))))
+       (reset! (::mouse-wheel-handler _state)
+               (goog.events/listen (goog.events.MouseWheelHandler. node)
+                                   goog.events.MouseWheelHandler.EventType.MOUSEWHEEL
+                                   (fn [e] (swap! (::image-scale _state) #(gmath/clamp (+ % (* 0.001 (.-deltaY e))) 1.0 4.0)))))
+       (reset! (::mouse-down-handler _state)
+               (goog.events/listen node
+                                   goog.events.EventType/MOUSEDOWN
+                                   (fn [e]
+                                     (let [x (.-offsetX e) y (.-offsetY e)]
+                                       (cond @(::space-down _state)
+                                             (let [drag (fx/Dragger. node)]
+                                               (.setLimits drag (goog.math.Rect. 0 0 400 400))
+                                               #_(.addEventListener drag
+                                                                    goog.fx.Dragger.EventType/DRAG
+                                                                    (fn [d]
+                                                                      (let [dx (-> d .-dragger .-deltaX)
+                                                                            dy (-> d .-dragger .-deltaY)]
+                                                                        (log* (str "x: " dx " y: " dy))
+                                                                        (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
+                                                                        (swap! image-y (fn [y] (gmath/clamp dy 0 y))))))
+                                               (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
+                                               (.startDrag drag e))
+                                             (not @(::annotation-edit _state))
+                                             (if-let [ann (click-on-annotation x y)]
+                                               (reset! (::annotation-edit _state) {:x (+ 7 (:x ann)) :y (+ 7 (:y ann))})
+                                               (swap! file-annotations conj {:x x :y y :id (rand-int 99999999)}))))))))
      _state)
    :will-unmount
    (fn [_state]
      (goog.events/unlistenByKey js/document goog.events.EventType.KEYUP @(::key-up-listener _state))
      (goog.events/unlistenByKey js/document goog.events.EventType.KEYDOWN @(::key-down-listener _state))
+     (goog.events/unlistenByKey js/document goog.events.EventType.MOUSEWHEEL @(::mouse-wheel-handler _state))
+     (goog.events/unlistenByKey js/document goog.events.EventType.MOUSEDOWN @(::mouse-down-handler _state))
      _state)}
   [_state]
   (let [image-scale (::image-scale _state)
         image-x (::image-x _state)
         image-y (::image-y _state)
-        space-down (::space-down _state)
-        annotation-edit (atom nil)]
+        space-down (::space-down _state)]
     [:div {:style {:position "absolute" :top 0 :left 0}}
      [:img {:style {:transform (gstring/format "scale(%s)" (react image-scale))}
             :src "/img/template_ios7.png"}]
      [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
       [:svg {:width "100%" :height "100%"
              :style {:transform (gstring/format "scale(%s)" (react image-scale))}}
-       (for [{:keys [id x y]} @file-annotations]
+       (for [{:keys [id x y]} (react file-annotations)]
          [:circle {:key (rand-int 999999999) ; TODO crap
                    :cx x :cy y
                    :r 10 :style {:fill "#f7a032" :stroke "rgba(255, 124, 43, 0.3)" :stroke-width "3px"}
