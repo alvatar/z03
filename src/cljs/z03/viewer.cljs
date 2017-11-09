@@ -41,13 +41,12 @@
                 e))
          @file-annotations)))
 
-(defcs editable
+(defcs image-viewer
   < r/reactive
   (r/local 1 ::image-scale)
   (r/local 0 ::image-x)
   (r/local 0 ::image-y)
   (r/local false ::space-down)
-  (r/local nil ::annotation-edit)
   (r/local nil ::key-down-listener)
   (r/local nil ::key-up-listener)
   (r/local nil ::mouse-wheel-handler)
@@ -86,20 +85,15 @@
                                        (cond @(::space-down _state)
                                              (let [drag (fx/Dragger. node)]
                                                (.setLimits drag (goog.math.Rect. 0 0 400 400))
-                                               #_(.addEventListener drag
-                                                                    goog.fx.Dragger.EventType/DRAG
-                                                                    (fn [d]
-                                                                      (let [dx (-> d .-dragger .-deltaX)
-                                                                            dy (-> d .-dragger .-deltaY)]
-                                                                        (log* (str "x: " dx " y: " dy))
-                                                                        (swap! image-x (fn [x] (gmath/clamp dx 0 x)))
-                                                                        (swap! image-y (fn [y] (gmath/clamp dy 0 y))))))
+                                               (.addEventListener drag
+                                                                  goog.fx.Dragger.EventType/DRAG
+                                                                  (fn [d]
+                                                                    (let [x (-> d .-dragger .-deltaX)
+                                                                          y (-> d .-dragger .-deltaY)]
+                                                                      (reset! (::image-x _state) x)
+                                                                      (reset! (::image-y _state) y))))
                                                (.addEventListener drag goog.fx.Dragger.EventType/END #(.dispose drag))
-                                               (.startDrag drag e))
-                                             (not @(::annotation-edit _state))
-                                             (if-let [ann (click-on-annotation x y)]
-                                               (reset! (::annotation-edit _state) {:x (+ 7 (:x ann)) :y (+ 7 (:y ann))})
-                                               (swap! file-annotations conj {:x x :y y :id (rand-int 99999999)}))))))))
+                                               (.startDrag drag e))))))))
      _state)
    :will-unmount
    (fn [_state]
@@ -115,31 +109,18 @@
         space-down (::space-down _state)
         ;; TODO: user, project, commit
         file-url (gstring/format "/u/%s/%s/blob/%s/%s" "thor" @(:active-project app-state) "master" @(:active-file app-state))]
-    [:div.limit
-     [:div {:style {:position "absolute" :top (react image-y) :left (react image-x)}}
-      [:img#object1 {:style {:max-width "100%" :max-height "100%"
-                             :object-fit "contain"
-                             :transform (gstring/format "scale(%s)" (react image-scale))}
-                     :src file-url}]
-      [:div {:style {:position "absolute" :top 0 :left 0 :width "100%" :height "100%"}}
-       [:svg {:width "100%" :height "100%"
-              :style {:transform (gstring/format "scale(%s)" (react image-scale))}}
-        (for [{:keys [id x y]} (react file-annotations)]
-          [:circle {:key (rand-int 999999999) ; TODO crap
-                    :cx x :cy y
-                    :r 10 :style {:fill "#f7a032" :stroke "rgba(255, 124, 43, 0.3)" :stroke-width "3px"}
-                    :cursor "pointer"}])]
-       (when-let [{:keys [x y]} (react (::annotation-edit _state))]
-         [:div {:style {:position "absolute" :left x :top y}}
-          [:textarea {:rows 4 :cols 50}]
-          [:div
-           [:h4.rfloat.link {:style {:margin-top 0} :on-click #(reset! (::annotation-edit _state) nil)} "Save"]
-           [:h4.rfloat.link {:style {:margin "0 10px 0 0"} :on-click #(reset! (::annotation-edit _state) nil)} "Cancel"]]])]]]))
+    [:img#object1 {:style {:max-width "100%" :max-height "100%"
+                           :transform (gstring/format "translate(%spx, %spx) scale(%s)"
+                                                      (react image-x)
+                                                      (react image-y)
+                                                      (react image-scale))}
+                   :src file-url}]))
 
 (defc file-viewer
   []
   [:div.editor-container
-   (editable)])
+   [:div.limit
+    (image-viewer)]])
 
 (defc file-ui
   < r/reactive

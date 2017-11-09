@@ -186,12 +186,16 @@
    [:.editor-container {:position "fixed"
                         :top 0 :left 0
                         :height "100%" :width "100%"
-                        :background "url(/img/editor-bg.png) top left repeat"
-                        :background-attachment "fixed"
-                        :background-position "top left"}
-    [:.limit {:position "absolute"
-              :width "100%" :height "100%"
-              :display "block"
+                        ;;:background "url(/img/editor-bg.png) top left repeat"
+                        ;;:background-attachment "fixed"
+                        ;;:background-position "top left"
+                        }
+    [:.limit {:position "relative"
+              :width (u/px 900)
+              :height "100%"
+              ;;:display "block"
+              :border "1px solid"
+              :margin "0 auto"
               :overflow "hidden"
               :top (u/px 30)}]]
    [:.footer {:margin {:top (u/px 200)}}
