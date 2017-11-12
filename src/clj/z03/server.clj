@@ -10,7 +10,7 @@
             [ring.middleware.defaults :refer :all]
             [ring.middleware.stacktrace :as trace]
             [prone.middleware :as prone]
-            [compojure.core :refer [ANY GET PUT POST DELETE defroutes]]
+            [compojure.core :refer [ANY GET PUT POST DELETE defroutes context]]
             [compojure.route :refer [resources not-found]]
             [compojure.response :refer [render]]
             [aleph [netty] [http]]
@@ -88,11 +88,13 @@
                       {:status 200
                        :headers {"Content-Type" "text/plain"}
                        :body (str {:user user :project project :commit commit})}))
-  (GET "/u/:user/:project/blob/:commit/:file" [user project commit file :as req]
-       (authenticated user
-                      {:status 200
-                       :headers {}
-                       :body (io/input-stream (io/resource "public/img/template_ios7.png"))}))
+  (context "/u/:user/:project/blob/:commit" [user project commit file :as req]
+           (GET "/*" [file]
+                ;;(get req :path-info)
+                (authenticated user
+                               {:status 200
+                                :headers {}
+                                :body (io/input-stream (io/resource "public/img/template_ios7.png"))})))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
