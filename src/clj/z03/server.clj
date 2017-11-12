@@ -36,7 +36,8 @@
 (let [packer (sente-transit/get-transit-packer)
       {:keys [ch-recv send-fn connected-uids
               ajax-post-fn ajax-get-or-ws-handshake-fn]}
-      (sente/make-channel-socket! (get-sch-adapter) {:packer packer})]
+      (sente/make-channel-socket! (get-sch-adapter) {:packer packer
+                                                     :user-id-fn :identity})]
   (def ring-ajax-post ajax-post-fn)
   (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
   (def ch-chsk ch-recv) ; ChannelSocket's receive channel

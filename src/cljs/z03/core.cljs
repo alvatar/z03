@@ -21,7 +21,7 @@
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
-   [z03.globals :as globals :refer [db-conn display-type window app-state]]
+   [z03.globals :as globals :refer [display-type window app-state]]
    [z03.utils :as utils :refer [log* log**]]
    [z03.client :as client])
   (:require-macros
@@ -85,9 +85,8 @@
 (defmethod client/-event-msg-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
   (let [[?user ?csrf-token ?handshake-data] ?data]
-    ;; (reset! (:user-id app-state) ?user)
-    ;; (when-not (= ?user :taoensso.sente/nil-uid)
-    ;;   (log* "HANDSHAKE"))
+    (when-not (= ?user :taoensso.sente/nil-uid)
+      (reset! (:user app-state) ?user))
     (get-user-initial-data)))
 
 ;;
@@ -110,12 +109,11 @@
   [:div.header-container
    [:div.header-text
     [:h4.lfloat.clickable {:on-click #(js/alert "User Settings (TODO)")} "Settings"]
-    [:h4.rfloat.clickable
-     "TODO"
+    [:h4.rfloat.clickable (:user-name (react (:user app-state)))
      #_@(p/q '[:find ?n .
-             :where [?e]
-             [?e :user/name ?n]]
-           db-conn)]]])
+               :where [?e]
+               [?e :user/name ?n]]
+             db-conn)]]])
 
 (defc home-ui
   < r/reactive
@@ -157,12 +155,11 @@
      [:h4.clickable {:on-click #(reset! (:active-project app-state) nil)} "Back"]]
     [:h4.lfloat.clickable {:on-click #(js/alert "Project Settings (TODO)")} "Settings"]
     [:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
-    [:h4.rfloat
-     "TODO"
+    [:h4.rfloat (:user-name (react (:user app-state)))
      #_@(p/q '[:find ?n .
-             :where [?e]
-             [?e :user/name ?n]]
-           db-conn)]]])
+               :where [?e]
+               [?e :user/name ?n]]
+             db-conn)]]])
 
 (defn draw-git-graph []
   (when-let [commits @(:commits app-state)]
@@ -181,11 +178,11 @@
           fork-points @(:fork-points app-state)
           branches (atom {})]
       #_(.addEventListener (oget gg "canvas")
-                         "commit:mouseover"
-                         (fn [ev]
-                           (reset! (:hover-commit app-state)
-                                   (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
-                                     {:author author :age date :subject message :hash sha1}))))
+                           "commit:mouseover"
+                           (fn [ev]
+                             (reset! (:hover-commit app-state)
+                                     (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
+                                       {:author author :age date :subject message :hash sha1}))))
       (doseq [{:keys [hash subject parents age author]} commits]
         (let [nparents (count parents)
               commit-data (clj->js {:message subject :sha1 hash :date age :author author

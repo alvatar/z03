@@ -1,6 +1,7 @@
 (ns z03.globals
-  (:require
-   [datascript.core :as d]))
+  ;; (:require
+  ;;  [datascript.core :as d])
+  )
 
 (goog-define *server-ip* "127.0.0.1")
 
@@ -11,11 +12,11 @@
 ;; Database
 ;;
 
-(def db-schema {:user/name {:db.unique :db.unique/identity}})
-(def db-conn (d/create-conn db-schema))
+;; (def db-schema {:user/name {:db.unique :db.unique/identity}})
+;; (def db-conn (d/create-conn db-schema))
 
-;; Globals will use eid 1
-(d/transact! db-conn [[:db/add 1 :user/name "Alvatar"]])
+;; ;; Globals will use eid 1
+;; (d/transact! db-conn [[:db/add 1 :user/name "Alvatar"]])
 
 ;; (def selected-revision
 ;;   (p/q '[:find ?n .
@@ -60,7 +61,8 @@
 ;;
 
 (defonce app-state
-  {:projects (atom nil)
+  {:user (atom nil)
+   :projects (atom nil)
    :commits (atom nil)
    :refs (atom nil)
    :fork-points (atom nil)

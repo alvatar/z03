@@ -16,7 +16,7 @@
    ;; -----
    [z03.style]
    [z03.viewer :refer [file-ui]]
-   [z03.globals :as globals :refer [db-conn display-type window app-state]]
+   [z03.globals :as globals :refer [display-type window app-state]]
    [z03.utils :as utils :refer [log*]]
    [z03.client :as client])
   (:require-macros

@@ -18,7 +18,7 @@
    ;; -----
    [z03.style]
    [z03.utils :as utils :refer [log* log**]]
-   [z03.globals :as globals :refer [db-conn display-type window app-state]])
+   [z03.globals :as globals :refer [display-type window app-state]])
   (:require-macros
    [garden.def :refer [defkeyframes]]))
 
