@@ -72,6 +72,16 @@
                           (fn [{:keys [filetree]}]
                             (reset! (:files app-state) filetree))))
 
+(defn logout [& [on-success-fn on-failure-fn]]
+  (sente/ajax-lite "/logout"
+                   {:method :post
+                    :headers {:X-CSRF-Token (:csrf-token @client/chsk-state)}
+                    :params {}}
+                   (fn [ajax-resp]
+                     (if (sente/cb-success? ajax-resp)
+                       (when on-success-fn (on-success-fn))
+                       (when on-failure-fn (on-failure-fn))))))
+
 ;;
 ;; Event Handlers
 ;;
@@ -93,8 +103,54 @@
 ;; UI Components
 ;;
 
-(defc footer
+(defc dialog
+  [{:keys [actions height contents-height]} & contents]
+  [:div.overlay
+   [:div.center-aligner
+    [:div.dialog {:style {:width "600px" :height (or height "400px")}}
+     [:div {:style {:min-height (or contents-height "350px")  :width "100%"}}
+      contents]
+     (conj [:div {:style {:margin-right "1rem"}}
+            actions])]]])
+
+(defc user-profile-dialog
   < r/reactive
+  [show-settings*]
+  (when (react show-settings*)
+    (dialog {:actions [[:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Save"]
+                       [:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Cancel"]
+                       [:button.dialog-button.lfloat {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]]
+             :contents-height "350px"
+             :height "400px"}
+            [:div {:style {:padding "1rem"}}
+             [:h2 "Active Plan"]
+             [:div.divider {:style {:margin-top "-14px"}}]
+             [:h4 "Beta " [:strong.clickable {:on-click #(js/alert "Beta plan is the only one currently available")} "(Change)"]]
+             ;;[:h4 "Change"]
+             [:h2 "Payments"]
+             [:div.divider {:style {:margin-top "-14px"}}]
+             [:h4 "None"]
+             [:h2 "Billing Info"]
+             [:div.divider {:style {:margin-top "-14px"}}]
+             [:h4 "None"]])))
+
+(defc project-settings-dialog
+  < r/reactive
+  [show-settings*]
+  (when (react show-settings*)
+    (dialog {:actions [[:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Save"]
+                       [:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Cancel"]]
+             :contents-height "350px"
+             :height "400px"}
+            [:div {:style {:padding "1rem"}}
+             [:h2 "Project Name"]
+             [:div.divider {:style {:margin-top "-14px"}}]
+             [:h4 (react (:active-project app-state))]
+             [:h2 "Project Owner"]
+             [:div.divider {:style {:margin-top "-14px"}}]
+             [:h4 (:user-name (react (:user app-state)))]])))
+
+(defc footer
   []
   [:div.footer
    [:div.col-4.center [:div.login-logo [:img {:src "/svg/logo.svg" :width "90px"}]]]
@@ -103,17 +159,17 @@
    [:h6 "Terms"]
    [:h6 "Privacy"]])
 
-(defc home-ui-header
+(defcs home-ui-header
   < r/reactive
-  []
-  [:div.header-container
-   [:div.header-text
-    [:h4.lfloat.clickable {:on-click #(js/alert "User Settings (TODO)")} "Settings"]
-    [:h4.rfloat.clickable (:user-name (react (:user app-state)))
-     #_@(p/q '[:find ?n .
-               :where [?e]
-               [?e :user/name ?n]]
-             db-conn)]]])
+  (r/local false ::show-settings)
+  [_state]
+  (let [show-settings* (::show-settings _state)]
+    [:div.header-container
+     [:div.header-text
+      ;; [:h4.lfloat.clickable {:on-click #(reset! show-settings* true)} "Account Settings"]
+      [:div.lfloat.logo [:img {:src "/svg/logo.svg" :width "60px"}]]
+      [:h4.rfloat.clickable {:on-click #(reset! show-settings* true)} (:user-name (react (:user app-state)))]
+      (user-profile-dialog show-settings*)]]))
 
 (defc home-ui
   < r/reactive
@@ -135,31 +191,26 @@
       [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]])
    (home-ui-header)])
 
-(defn logout [& [on-success-fn on-failure-fn]]
-  (sente/ajax-lite "/logout"
-                   {:method :post
-                    :headers {:X-CSRF-Token (:csrf-token @client/chsk-state)}
-                    :params {}}
-                   (fn [ajax-resp]
-                     (if (sente/cb-success? ajax-resp)
-                       (when on-success-fn (on-success-fn))
-                       (when on-failure-fn (on-failure-fn))))))
-
-(defc project-ui-header
+(defcs project-ui-header
   < r/reactive
-  []
-  [:div.header-container
-   [:div.header-text
-    [:div.lfloat {:style {:margin-right "0.5rem"}}
-     ;; [:i.fa.fa-undo {:aria-hidden "true"}]
-     [:h4.clickable {:on-click #(reset! (:active-project app-state) nil)} "Back"]]
-    [:h4.lfloat.clickable {:on-click #(js/alert "Project Settings (TODO)")} "Settings"]
-    [:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
-    [:h4.rfloat (:user-name (react (:user app-state)))
-     #_@(p/q '[:find ?n .
-               :where [?e]
-               [?e :user/name ?n]]
-             db-conn)]]])
+  (r/local false ::show-user-profile)
+  (r/local false ::show-project-settings)
+  [_state]
+  (let [show-user-profile* (::show-user-profile _state)
+        show-project-settings* (::show-project-settings _state)]
+    [:div.header-container
+     [:div.header-text
+      [:div.lfloat.logo [:img {:src "/svg/logo.svg" :width "60px"}]]
+      [:div.lfloat {:style {:margin-right "0.5rem"}}
+       #_[:i.fa.fa-undo {:aria-hidden "true"}]]
+      
+      ;;[:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
+      
+      [:h4.rfloat.clickable {:on-click #(reset! show-user-profile* true)} (:user-name (react (:user app-state)))]
+      [:h4.rfloat.clickable {:on-click #(reset! show-project-settings* true)} "Project"]
+      [:h4.rfloat.clickable {:on-click #(reset! (:active-project app-state) nil)} "Back"]
+      (user-profile-dialog show-user-profile*)
+      (project-settings-dialog show-project-settings*)]]))
 
 (defn draw-git-graph []
   (when-let [commits @(:commits app-state)]

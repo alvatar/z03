@@ -15,7 +15,8 @@
       [garden.color :as color :refer [hsl rgb]]))
   #?(:cljs
      (:require-macros
-      [garden.def :refer [defkeyframes]])))
+      [garden.def :refer [defkeyframes]]
+      [garden.selectors :refer [defpseudoelement]])))
 
   
 (defkeyframes drawer-animation-show
@@ -101,7 +102,12 @@
    [:.clickable {:cursor "pointer"}]
    [:.center-aligner {:height "100%" :width "100%"
                       :display "flex" :align-items "center" :justify-content "center"}]
+   [:.aligned-bottom {:align-self "flex-end"}]
+   [:.flex-right {:margin-left "auto"}]
    ;; Elements
+   [:.overlay {:position "fixed" :left 0 :right 0 :height (u/percent 100) :width (u/percent 100)
+               :background-color "rgba(255,255,255,0.9)"}]
+   [:.dialog {:border "solid 1px" :background-color "white"}]
    [:.divider {:border {:style "solid" :width "0 0 1 0"}}]
    [:.flat-text-field {:background-color light-grey
                        :color dark-grey
@@ -134,6 +140,17 @@
                     :text-decoration "none"
                     :display "inline-block"
                     :font-size "16px"}]
+   [:.dialog-button {:cursor "pointer"
+                     :background-color "white"
+                     :font-family ["Oswald" "sans-serif"]
+                     :border "solid 1px"
+                     :width "150px"
+                     :padding "5px 0"
+                     :margin "2px 0 2px 1rem"
+                     :text-align "center"
+                     :text-decoration "none"
+                     :display "inline-block"
+                     :font-size "16px"}]
    [:.file-icon {:float "left" :color "#ccc" :margin {:top (u/px 14) :right (u/px 7)}}]
    [:#graph-container {:min-height "230px"
                        :overflow "auto"
@@ -173,9 +190,10 @@
                         :border {:style "solid" :width "0 0 1 0"}
                         :font {:family ["Bitter" "sans-serif"]
                                :weight 400
-                               :size (u/rem 0.7)}}]
-   [:.header-text
-    [:h4 {:line-height (u/rem 0.8) :margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
+                               :size (u/rem 0.7)}}
+    [:.header-text
+     [:h4 {:line-height (u/rem 0.8) :margin 0 :padding "0.5rem 0.5rem 0.5rem 0.5rem"}]]
+    [:.logo {:margin {:top (u/px 12) :left (u/px 10)}}]]
    [:.project-list {:margin {:top (u/px 33) :bottom (u/rem 10)}}
     [:.item {:position "relative"
              :height (u/rem 10)
