@@ -1,8 +1,10 @@
 (ns z03.git
   (:require [clojure.pprint :refer [pprint]]
-            ;; Environment and configuration
+            [clojure.java.io :as io]
             [environ.core :refer [env]]
-            [clj-ssh.ssh :as ssh]))
+            [clj-ssh.ssh :as ssh]
+            ;; -----
+            [z03.utils :as utils]))
 
 ;;
 ;; SSH
@@ -33,16 +35,22 @@
       (swap! session-registry assoc user-id session)
       session)))
 
-(defn do-ssh-send [session cmd]
+(defn do-ssh-send [session cmd & [out-type]]
   (->> (-> (ssh/ssh session {:in cmd})
            :out
            (clojure.string/split #"\n"))
        (drop 2)
        (map clojure.string/trim)))
 
-(defn ssh-send [user-id cmd]
+(defn do-ssh-send-with-bytes [session cmd]
+  (-> (ssh/ssh session {:in cmd :out :bytes})
+      :out))
+
+(defn ssh-send [user-id cmd & [bytes?]]
   (if-let [session (get @session-registry user-id)]
-    (do-ssh-send session cmd)
+    (if bytes?
+      (do-ssh-send-with-bytes session cmd)
+      (do-ssh-send session cmd))
     (if-let [session (open-ssh user-id)]
       (do-ssh-send session cmd)
       :error-failed-to-connect)))
@@ -117,3 +125,48 @@
                             (format "cd %s && git merge-base --fork-point %s"
                                     repo-dir
                                     branch)))])))
+
+(defn get-file [user-id repo-dir commit file & [tmp-dir]]
+  (let [filename (.getFileName (java.nio.file.Paths/get "" (into-array String [file])))
+        target-filename (str (or tmp-dir "/tmp") "/" filename "-" (utils/rand-str 15))]
+    (ssh-send user-id
+              (format "cd %s && git --no-pager show %s:%s > %s"
+                      repo-dir
+                      commit
+                      file
+                      target-filename))
+    target-filename))
+
+(defn ensure-removal [get-file f]
+  (let [filename (ref nil)
+        output (ref nil)]
+    (dosync
+     (try
+       (ref-set filename (get-file))
+       (println @filename)
+       (ref-set output (f @filename))
+       (finally
+         (when-let [file (io/as-file @filename)]
+           (when (.exists file)
+             (println "REMOVE.. " @filename)
+             (io/delete-file @filename))))))
+    @output))
+
+(defn with-git-file [user-id repo-dir commit file f]
+  (ensure-removal #(get-file user-id repo-dir commit file) f))
+
+;; (defn search-in-array [arr c n]
+;;   (let [len (count arr)]
+;;     (loop [i 0
+;;            ni 1]
+;;       (cond (= (aget arr i) c)
+;;             (if (= ni n) i (recur (inc i) (inc ni)))
+;;             (>= i len) nil
+;;             :else (recur (inc i) ni)))))
+
+;; (def aaaa (get-file 1 "/data/Dropbox/projects/z03" "master" "./resources/public/img/template_ios7.png"))
+;; (def bbbb (java.util.Arrays/copyOfRange aaaa 389 (count aaaa)))
+;; (with-open [out (io/output-stream (io/file "tetsttt"))] (.write out bbbb))
+;; (search-in-array aaaa 10 1)
+
+;; Requires \r\n to \n conversion

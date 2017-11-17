@@ -24,7 +24,8 @@
             ;; -----
             [z03.actions :as actions]
             [z03.html :as html]
-            [z03.database :as db])
+            [z03.database :as db]
+            [z03.git :as git])
   (:import (java.lang.Integer)
            (java.net InetSocketAddress))
   (:gen-class))
@@ -73,6 +74,14 @@
   (authenticated user
                  (render (html/user-home user) req)))
 
+(defn file-handler [user-id repo-dir commit file]
+  (git/with-git-file
+    user-id repo-dir commit file
+    (fn [filename]
+      {:status 200
+       :headers {}
+       :body (io/input-stream filename)})))
+
 (defroutes app
   (GET "/" req (render (html/index) req))
   (GET "/u" req #(redirect (or (when-let [u (:user-name (get-in % [:session :identity]))]
@@ -89,13 +98,13 @@
                       {:status 200
                        :headers {"Content-Type" "text/plain"}
                        :body (str {:user user :project project :commit commit})}))
-  (context "/u/:user/:project/blob/:commit" [user project commit file :as req]
-           (GET "/*" [file]
-                ;;(get req :path-info)
-                (authenticated user
-                               {:status 200
-                                :headers {}
-                                :body (io/input-stream (io/resource "public/img/template_ios7.png"))})))
+  (context "/u/:user/:project-name/blob/:commit" [user project-name commit file :as req]
+           (GET "/*" []
+                (authenticated user (when-let [project (db/project-get-by :name project-name)]
+                                      (file-handler (get-in req [:session :identity :id])
+                                                    (:git-repo project)
+                                                    commit
+                                                    (str "." (:path-info req)))))))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)

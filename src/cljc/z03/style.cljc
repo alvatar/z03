@@ -159,7 +159,7 @@
                      ;;:pointer-events "none"
                      :width "140px"
                      :margin-top "-214.5px"
-                     :margin-left "-43.5px"}
+                     :margin-left "-44px"}
     [:h6 {:margin {:top 0 :bottom 0}}]]
    [:.commit-actions-container {:margin-left "-25px"}]
    [:.commit-tooltip {:position "fixed" :margin {:top "12px" :left "12px"}}]

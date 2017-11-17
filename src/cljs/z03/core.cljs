@@ -60,9 +60,6 @@
                           (fn [{:keys [filetree commits refs fork-points]}]
                             (reset! (:files app-state) filetree)
                             (reset! (:commits app-state) commits)
-                            #_(let [last-commit (last commits)]
-                              ;;(reset! (:active-commit app-state) last-commit)
-                              (reset! (:hover-commit app-state) last-commit))
                             (reset! (:refs app-state) refs)
                             (reset! (:fork-points app-state) fork-points)
                             (draw-git-graph))))
@@ -111,7 +108,8 @@
      [:div {:style {:min-height (or contents-height "350px")  :width "100%"}}
       contents]
      (conj [:div {:style {:margin-right "1rem"}}
-            actions])]]])
+            (for [[i [elem params body]] (mapv vector (range) actions)]
+              [elem (merge {:key (str "dialog-action-" i)} params) body])])]]])
 
 (defc user-profile-dialog
   < r/reactive
@@ -126,7 +124,6 @@
              [:h2 "Active Plan"]
              [:div.divider {:style {:margin-top "-14px"}}]
              [:h4 "Beta " [:strong.clickable {:on-click #(js/alert "Beta plan is the only one currently available")} "(Change)"]]
-             ;;[:h4 "Change"]
              [:h2 "Payments"]
              [:div.divider {:style {:margin-top "-14px"}}]
              [:h4 "None"]
@@ -166,7 +163,6 @@
   (let [show-settings* (::show-settings _state)]
     [:div.header-container
      [:div.header-text
-      ;; [:h4.lfloat.clickable {:on-click #(reset! show-settings* true)} "Account Settings"]
       [:div.lfloat.logo [:img {:src "/svg/logo.svg" :width "60px"}]]
       [:h4.rfloat.clickable {:on-click #(reset! show-settings* true)} (:user-name (react (:user app-state)))]
       (user-profile-dialog show-settings*)]]))
@@ -203,9 +199,6 @@
       [:div.lfloat.logo [:img {:src "/svg/logo.svg" :width "60px"}]]
       [:div.lfloat {:style {:margin-right "0.5rem"}}
        #_[:i.fa.fa-undo {:aria-hidden "true"}]]
-      
-      ;;[:h4.rfloat.clickable {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]
-      
       [:h4.rfloat.clickable {:on-click #(reset! show-user-profile* true)} (:user-name (react (:user app-state)))]
       [:h4.rfloat.clickable {:on-click #(reset! show-project-settings* true)} "Project"]
       [:h4.rfloat.clickable {:on-click #(reset! (:active-project app-state) nil)} "Back"]
@@ -228,12 +221,6 @@
                                 "mode" "compact"})
           fork-points @(:fork-points app-state)
           branches (atom {})]
-      #_(.addEventListener (oget gg "canvas")
-                           "commit:mouseover"
-                           (fn [ev]
-                             (reset! (:hover-commit app-state)
-                                     (let [{:keys [author date message sha1]} (clojure.walk/keywordize-keys (js->clj (oget ev "data")))]
-                                       {:author author :age date :subject message :hash sha1}))))
       (doseq [{:keys [hash subject parents age author]} commits]
         (let [nparents (count parents)
               commit-data (clj->js {:message subject :sha1 hash :date age :author author
@@ -242,11 +229,7 @@
                                                  (reset! (:files app-state) nil)
                                                  (get-commit-files {:project @(:active-project app-state)
                                                                     :commit hash})
-                                                 (reset! (:active-commit app-state) commit
-                                                         #_{:author (oget commit "author")
-                                                            :age (oget commit "date")
-                                                            :subject (oget commit "message")
-                                                            :hash hash})))})]
+                                                 (reset! (:active-commit app-state) commit)))})]
           (case nparents
             0 (let [master (.branch gg "master")]
                 (.commit master commit-data)
@@ -274,10 +257,6 @@
       (let [graph-div (js/document.getElementById "graph-container")]
         (oset! graph-div "scrollLeft" (oget graph-div "scrollWidth"))))))
 
-;; Back to Hack
-#_(defonce _clicked-commit (add-watch clicked-commit :clicked-commit
-                                    (fn [key atom old-state new-state]
-                                      (draw-git-graph))))
 (defonce _draw-git-graph (atom nil))
 (if @_draw-git-graph (js/setTimeout draw-git-graph 500) (reset! _draw-git-graph true))
 
@@ -337,16 +316,21 @@
                [:div.file-item.col-3.clickable {:on-click #(swap! (:current-path app-state) concat [filename])}
                 [:i.fa.fa-folder.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#025382"}} (str filename "/")]]
-               ;;[:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-               ;;[:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]
-               ])
+               [:div.file-item.col-9
+                (when commit-is-ref
+                  [:div.rfloat {:style {:line-height "40px"}}
+                   [:i.fa.fa-trash.file-icon.clickable {:on-click #(js/alert "no implemented")
+                                                        :aria-hidden "true"}]])]])
             (for [{:keys [filename filetype age subject full-path]} (sort-by :filename file-rows)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
                [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) full-path)}
                 [:i.fa.fa-file.file-icon {:aria-hidden "true"}]
                 [:p.nomargin {:style {:line-height "40px" :height "40px" :color "#008cb7"}} filename]]
                [:div.file-item.col-7 [:p.nomargin {:style {:line-height "40px" :height "40px"}} subject]]
-               [:div.file-item.col-2 [:p.nomargin {:style {:line-height "40px" :height "40px"}} age]]])))]])
+               [:div.file-item.col-2
+                [:p.nomargin.lfloat {:style {:line-height "40px" :height "40px"}} age]
+                (when commit-is-ref
+                  [:div.rfloat {:style {:line-height "40px"}} [:i.fa.fa-trash.file-icon {:aria-hidden "true"}]])]])))]])
      (project-ui-header)
      (footer)]))
 
