@@ -62,14 +62,16 @@
                                        :animation "spinner-bounce 2.0s infinite ease-in-out"}]
    [:.double-bounce2 {:animation-delay "-1.0s"}]])
 
+(def contents-font "Questrial")
+
 (def styles
   ;; Ref http://www.webp.ch/fourre-tout/target/#!/dgellow.fourre_tout.garden
   (css
    {:vendors ["o" "moz" "webkit"]}
    ;; General
-   (stylesheet/at-import "https://fonts.googleapis.com/css?family=Bitter:400,700|Oswald:200,500")
+   (stylesheet/at-import "https://fonts.googleapis.com/css?family=Bitter:400,700|Questrial:400")
    [:body :h1 :h2 :h3 :h4 :h5 :h6 :p
-    {:font-family ["Oswald" "sans-serif"]
+    {:font-family [contents-font "sans-serif"]
      :font-weight 200
      :overflow-x "hidden"
      :line-height "1.2rem"
@@ -90,7 +92,7 @@
               :border {:style "solid" :width "0 0 1 0"}}]
    [:h5 {:line-height (u/rem 1.6)}]
    [:textarea
-    {:font-family ["Oswald" "sans-serif"]
+    {:font-family [contents-font "sans-serif"]
      :font-weight 200
      :border {:style "solid" :width "0 0 0 2"}
      :background-color "#eee"}]
@@ -101,27 +103,28 @@
    [:.nomargin {:margin 0 :padding 0}]
    [:.clickable {:cursor "pointer"}]
    [:.center-aligner {:height "100%" :width "100%"
+                      :position "absolute"
                       :display "flex" :align-items "center" :justify-content "center"}]
    [:.aligned-bottom {:align-self "flex-end"}]
    [:.flex-right {:margin-left "auto"}]
    ;; Elements
-   [:.overlay {:position "fixed" :left 0 :right 0 :height (u/percent 100) :width (u/percent 100)
+   [:.overlay {:position "fixed" :left 0 :top 0 :height (u/percent 100) :width (u/percent 100)
                :background-color "rgba(255,255,255,0.9)"}]
    [:.dialog {:border "solid 1px" :background-color "white"}]
    [:.divider {:border {:style "solid" :width "0 0 1 0"}}]
    [:.flat-text-field {:background-color light-grey
                        :color dark-grey
-                       :font-family ["Oswald" "sans-serif"]
+                       :font-family [contents-font "sans-serif"]
                        :border "none"
                        :padding "10px 32px"
-                       ;:text-align "center"
+                                        ;:text-align "center"
                        :text-decoration "none"
                        :display "inline-block"
                        :font-size "16px"}]
    [:.flat-button {:background-color light-grey
                    :color dark-grey
                    :cursor "pointer"
-                   :font-family ["Oswald" "sans-serif"]
+                   :font-family [contents-font "sans-serif"]
                    :border "none"
                    :padding "15px 32px"
                    :text-align "center"
@@ -131,7 +134,7 @@
    [:.graph-button {:background-color light-grey
                     :color dark-grey
                     :cursor "pointer"
-                    :font-family ["Oswald" "sans-serif"]
+                    :font-family [contents-font "sans-serif"]
                     :border "none"
                     :width "150px"
                     :padding "5px 0"
@@ -142,7 +145,7 @@
                     :font-size "16px"}]
    [:.dialog-button {:cursor "pointer"
                      :background-color "white"
-                     :font-family ["Oswald" "sans-serif"]
+                     :font-family [contents-font "sans-serif"]
                      :border "solid 1px"
                      :width "150px"
                      :padding "5px 0"
@@ -196,11 +199,12 @@
     [:.logo {:margin {:top (u/px 12) :left (u/px 10)}}]]
    [:.project-list {:margin {:top (u/px 33) :bottom (u/rem 10)}}
     [:.item {:position "relative"
-             :height (u/rem 10)
+             :height (u/px 80)
              :padding (u/rem 1)
-             :border {:style "solid" :width "0 0 1 0"}}
+             ;;:border {:style "solid" :width "0 0 1 0"}
+             }
      [:&:hover {:background {:color "#eee"}}]
-     [:&:first-child {:border {:style "solid" :width "1 0 1 0"}}]]]
+     #_[:&:first-child {:border {:style "solid" :width "1 0 1 0"}}]]]
    [:.editor-container {:position "fixed"
                         :top 0 :left 0
                         :height "100%" :width "100%"

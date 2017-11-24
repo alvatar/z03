@@ -82,6 +82,22 @@
        :headers {}
        :body (io/input-stream filename)})))
 
+(def uploads-folder "/tmp/uploads/")
+
+(defn send-files [user-id project {{file :file} :params :as req}]
+  (let [repo-dir (:git-repo (db/project-get-by :name project))
+        copy-file (fn [{:keys [filename tempfile]}]
+                    (let [local-file (str repo-dir "/" filename)]
+                      (io/make-parents local-file)
+                      (io/copy tempfile (io/file local-file))))]
+    (if (vector? file)
+      (dorun (map copy-file file))
+      (copy-file file))
+    (git/commit-ammend-new user-id repo-dir)
+    {:status 200
+     :headers {"Content-Type" "text/plain"}
+     :body "OK"}))
+
 (defroutes app
   (GET "/" req (render (html/index) req))
   (GET "/u" req #(redirect (or (when-let [u (:user-name (get-in % [:session :identity]))]
@@ -100,11 +116,14 @@
                        :body (str {:user user :project project :commit commit})}))
   (context "/u/:user/:project-name/blob/:commit" [user project-name commit file :as req]
            (GET "/*" []
-                (authenticated user (when-let [project (db/project-get-by :name project-name)]
-                                      (file-handler (get-in req [:session :identity :id])
-                                                    (:git-repo project)
-                                                    commit
-                                                    (str "." (:path-info req)))))))
+                (authenticated user
+                               (when-let [project (db/project-get-by :name project-name)]
+                                 (file-handler (get-in req [:session :identity :id])
+                                               (:git-repo project)
+                                               commit
+                                               (str "." (:path-info req)))))))
+  (POST "/u/:user/:project/send-files" [user project :as req]
+        (send-files user project req))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
