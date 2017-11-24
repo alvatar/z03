@@ -128,7 +128,8 @@
 
 (defn get-file [user-id repo-dir commit file & [tmp-dir]]
   (let [filename (.getFileName (java.nio.file.Paths/get "" (into-array String [file])))
-        target-filename (str (or tmp-dir "/tmp") "/" filename "-" (utils/rand-str 15))]
+        target-filename (str (or tmp-dir "/tmp/git-extracted/") filename "-" (utils/rand-str 15))]
+    (io/make-parents target-filename)
     (ssh-send user-id
               (format "cd %s && git --no-pager show %s:%s > %s"
                       repo-dir
@@ -143,12 +144,10 @@
     (dosync
      (try
        (ref-set filename (get-file))
-       (println @filename)
        (ref-set output (f @filename))
        (finally
          (when-let [file (io/as-file @filename)]
            (when (.exists file)
-             (println "REMOVE.. " @filename)
              (io/delete-file @filename))))))
     @output))
 

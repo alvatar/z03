@@ -6,7 +6,7 @@
    [cljs.core.async :as async :refer (<! >! put! take! chan)]
    [taoensso.sente :as sente :refer (cb-success?)]
    [taoensso.sente.packers.transit :as sente-transit]
-   [datascript.core :as d]
+   [ajax.core :as ajax]
    [rum.core :as r :refer [defc defcs react]]
    [monet.canvas :as canvas]
    [goog.style]
@@ -92,6 +92,7 @@
 (defmethod client/-event-msg-handler :chsk/handshake
   [{:as ev-msg :keys [?data]}]
   (let [[?user ?csrf-token ?handshake-data] ?data]
+    (reset! (:csrf-token app-state) ?csrf-token)
     (when-not (= ?user :taoensso.sente/nil-uid)
       (reset! (:user app-state) ?user))
     (get-user-initial-data)))
@@ -120,7 +121,7 @@
                        [:button.dialog-button.lfloat {:on-click (fn [] (logout #(utils/open-url "/" false)))} "Logout"]]
              :contents-height "350px"
              :height "400px"}
-            [:div {:style {:padding "1rem"}}
+            [:div {:key "user-profile-dialog" :style {:padding "1rem"}}
              [:h2 "Active Plan"]
              [:div.divider {:style {:margin-top "-14px"}}]
              [:h4 "Beta " [:strong.clickable {:on-click #(js/alert "Beta plan is the only one currently available")} "(Change)"]]
@@ -139,7 +140,7 @@
                        [:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Cancel"]]
              :contents-height "350px"
              :height "400px"}
-            [:div {:style {:padding "1rem"}}
+            [:div {:key "project-settings-dialog" :style {:padding "1rem"}}
              [:h2 "Project Name"]
              [:div.divider {:style {:margin-top "-14px"}}]
              [:h4 (react (:active-project app-state))]
@@ -179,8 +180,8 @@
                                                     (get-project-initial-data {:name name}))}
          [:div {:style {:width "50%" :background-color "50%"}}
           [:h3 {:style {:margin-bottom "10px" :font-weight "bold"}} name]
-          [:h4 {:style {:margin-top "10px"}} description]]
-         [:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
+          [:h6 {:style {:margin-top "-10px"}} description]]
+         #_[:div {:style {:position "absolute" :left "50%" :top 0 :margin-top "5rem"}}
           (for [[c idx] (map vector latest-commits (range))]
             [:h6 {:key (str name c) :style {:color "#555" :margin "0 0 0 0"}} "- " c])]])]
      [:div.center-aligner
@@ -260,9 +261,41 @@
 (defonce _draw-git-graph (atom nil))
 (if @_draw-git-graph (js/setTimeout draw-git-graph 500) (reset! _draw-git-graph true))
 
-(defc project-ui
+
+(defn send-files [input-element]
+  (let [form-data
+        (let [fd (js/FormData.)
+              files (.-files input-element)
+              name (.-name input-element)]
+          (doseq [file-key (.keys js/Object files)]
+            (.append fd name (aget files file-key)))
+          fd)]
+    (ajax/POST "/send-files"
+               {:method :post
+                :headers {:X-CSRF-Token @(:csrf-token app-state)}
+                :body form-data
+                :response-format (ajax/raw-response-format)
+                :timeout 10000})))
+
+(defc add-file-dialog
   < r/reactive
-  []
+  [show-settings*]
+  (when (react show-settings*)
+    (dialog {:actions [[:button.dialog-button.rfloat {:on-click #(reset! show-settings* false)} "Done"]]
+             :contents-height "350px"
+             :height "400px"}
+            [:div {:key "add-file-dialog" :style {:padding "1rem"}}
+             [:h2 "Send files"]
+             [:form {:action "/send-files" :method "post" :enctype "multipart/form-data"}
+              [:input#file-getter {:name "file" :type "file" :multiple "multiple"}]
+              [:button.graph-button {:on-click #(send-files (js/document.getElementById "file-getter"))
+                                     :type "button"}
+               "Send"]]])))
+
+(defcs project-ui
+  < r/reactive
+  (r/local false ::show-add-file-dialog)
+  [_state]
   (let [files (react (:files app-state))
         active-commit (react (:active-commit app-state))
         commit-is-ref (and active-commit
@@ -275,7 +308,8 @@
                           {:filename k :filetype "directory"}
                           {:filename k :filetype "file"
                            :subject (:subject v) :age (:age v) :full-path (:full-path v)}))
-                      (if current-path (get-in files current-path) files))]
+                      (if current-path (get-in files current-path) files))
+        show-add-file-dialog (::show-add-file-dialog _state)]
     [:div {:style {:padding-top "80px" :height "220px"}}
      [:div#graph-container
       [:canvas#gitGraph]
@@ -286,20 +320,20 @@
          (if commit-is-ref
            [:div.commit-actions-container
             [:h6 "Working version"]
-            [:button.graph-button "add file"]
+            [:button.graph-button {:on-click #(reset! show-add-file-dialog true)} "add file"]
             [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]
             [:button.graph-button "new revision" [:i.fa.fa-arrow-right {:style {:margin-left "4px" } :aria-hidden "true"}]]]
            [:div.commit-actions-container
             [:h6 "No open comments"]
             [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]])])]
      (if-not files
-       [:div
+       [:div {:style {:height "200px"}}
         [:div.center-aligner
          [:div.spinner [:div.double-bounce1] [:div.double-bounce2]]]]
        [:div
         (if active-commit
           [:div.grid-noGutter.files-listing-header
-           [:div.col-9 [:h5.author [:strong (oget active-commit "author")] " " (oget active-commit "message")]]
+           [:div.col-9 [:h5.author [:strong (oget active-commit "author")] ": " (oget active-commit "message")]]
            [:div.col-3 [:h5.rfloat (oget active-commit "date")]]]
           [:h5 "Please select version in graph"])
         [:div.files-listing
@@ -332,7 +366,8 @@
                 (when commit-is-ref
                   [:div.rfloat {:style {:line-height "40px"}} [:i.fa.fa-trash.file-icon {:aria-hidden "true"}]])]])))]])
      (project-ui-header)
-     (footer)]))
+     (footer)
+     (add-file-dialog show-add-file-dialog)]))
 
 (defc app
   < r/reactive

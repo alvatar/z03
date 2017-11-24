@@ -82,6 +82,20 @@
        :headers {}
        :body (io/input-stream filename)})))
 
+(def uploads-folder "/tmp/uploads/")
+
+(defn send-files [{{file :file} :params :as req}]
+  (let [copy-file (fn [{:keys [filename tempfile]}]
+                    (let [local-file (str uploads-folder filename)]
+                      (io/make-parents local-file)
+                      (io/copy tempfile (io/file local-file))))]
+    (if (vector? file)
+      (dorun (map copy-file file))
+      (copy-file file))
+    {:status 200
+     :headers {"Content-Type" "text/plain"}
+     :body "OK"}))
+
 (defroutes app
   (GET "/" req (render (html/index) req))
   (GET "/u" req #(redirect (or (when-let [u (:user-name (get-in % [:session :identity]))]
@@ -105,6 +119,13 @@
                                                     (:git-repo project)
                                                     commit
                                                     (str "." (:path-info req)))))))
+  (POST "/send-files" req (send-files req))
+  #_(POST "/receive-file" 
+        {{{tempfile :tempfile filename :filename} :img} :params :as params}
+        (do (io/copy tempfile (io/file filename))
+            {:status 200
+             :headers {"Content-Type" "text/plain"}
+             :body "OK"}))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)

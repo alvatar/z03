@@ -25,7 +25,7 @@
                  [buddy/buddy-auth "2.1.0"]
                  [buddy/buddy-hashers "1.3.0"]
                  [cheshire "5.8.0"]
-                 [clj-time "0.14.0"]
+                 [clj-time "0.14.2"]
                  ;; Database
                  [org.clojure/java.jdbc "0.7.3"]
                  [org.postgresql/postgresql "42.1.4"]
@@ -41,8 +41,9 @@
                  ;; Cljs
                  [rum "0.10.8"]
                  [datascript "0.16.2"]
+                 [cljs-ajax "0.7.3"]
                  [rm-hull/monet "0.3.0"]
-                 [com.andrewmcveigh/cljs-time "0.5.1"]]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]]
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-environ "1.0.3"]]

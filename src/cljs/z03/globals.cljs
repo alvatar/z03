@@ -61,7 +61,8 @@
 ;;
 
 (defonce app-state
-  {:user (atom nil)
+  {:csrf-token (atom nil)
+   :user (atom nil)
    :projects (atom nil)
    :commits (atom nil)
    :refs (atom nil)
