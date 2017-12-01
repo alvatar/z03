@@ -69,6 +69,20 @@
                   :filetree (git/get-tree user-id (:git-repo project) commit)})
       (?reply-fn {:status :error}))))
 
+(defmethod -event-msg-handler :project/delete-file
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (let [{user-id :id} (get-in ring-req [:session :identity])
+        project (db/project-get-by :name (:project ?data))
+        commit (:commit ?data)
+        filepath (:filepath ?data)]
+    (if (some-> project
+                :user-id
+                (= user-id))
+      (do (git/delete-file user-id (:git-repo project) commit filepath)
+          (?reply-fn {:status :ok
+                      :filetree (git/get-tree user-id (:git-repo project) commit)}))
+      (?reply-fn {:status :error}))))
+
 ;;
 ;; Sente event router (`event-msg-handler` loop)
 ;;

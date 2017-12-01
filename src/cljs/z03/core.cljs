@@ -69,6 +69,11 @@
                           (fn [{:keys [filetree]}]
                             (reset! (:files app-state) filetree))))
 
+(def delete-file
+  (build-standard-request :project/delete-file
+                          (fn [{:keys [filetree]}]
+                            (reset! (:files app-state) filetree))))
+
 (defn logout [& [on-success-fn on-failure-fn]]
   (sente/ajax-lite "/logout"
                    {:method :post
@@ -271,9 +276,11 @@
           (doseq [file-key (.keys js/Object files)]
             (.append fd name (aget files file-key)))
           fd)]
-    (ajax/POST (gstring/format "/u/%s/%s/send-files"
-                               (:id @(:user app-state))
-                               @(:active-project app-state))
+    (ajax/POST (gstring/format "/u/%s/%s/%s/send-files/%"
+                               (:user-name @(:user app-state))
+                               @(:active-project app-state)
+                               (oget @(:active-commit app-state) "sha1")
+                               @(:current-path app-state))
                {:method :post
                 :headers {:X-CSRF-Token @(:csrf-token app-state)}
                 :body form-data
@@ -301,6 +308,7 @@
   [_state]
   (let [files (react (:files app-state))
         active-commit (react (:active-commit app-state))
+        num-commits (count (react (:commits app-state)))
         commit-is-ref (and active-commit
                            (some (let [h (oget active-commit "sha1")] #(= h %))
                                  (keys (react (:refs app-state)))))
@@ -321,11 +329,12 @@
                                      :top (oget active-commit "y")}}
          [:svg {:pointer-events "none" :height 70 :width 70} [:circle {:cx 50 :cy 50 :r 10 :stroke "#333" :stroke-width 3 :fill-opacity 0.0}]]
          (if commit-is-ref
-           [:div.commit-actions-container
-            [:h6 "Working version"]
-            [:button.graph-button {:on-click #(reset! show-add-file-dialog true)} "add file"]
-            [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]
-            [:button.graph-button "new revision" [:i.fa.fa-arrow-right {:style {:margin-left "4px" } :aria-hidden "true"}]]]
+           [:div {:style (if (= num-commits 1) {:margin-left "85px" :margin-top "50px"} {})}
+            [:div.commit-actions-container
+             [:h6 "Working version"]
+             [:button.graph-button {:on-click #(reset! show-add-file-dialog true)} "add file"]
+             [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]
+             [:button.graph-button "new revision" [:i.fa.fa-arrow-right {:style {:margin-left "4px" } :aria-hidden "true"}]]]]
            [:div.commit-actions-container
             [:h6 "No open comments"]
             [:button.graph-button "new version" [:i.fa.fa-arrow-down {:style {:margin-left "4px" } :aria-hidden "true"}]]])])]
@@ -356,7 +365,7 @@
                [:div.file-item.col-9
                 (when commit-is-ref
                   [:div.rfloat {:style {:line-height "40px"}}
-                   [:i.fa.fa-trash.file-icon.clickable {:on-click #(js/alert "no implemented")
+                   #_[:i.fa.fa-trash.file-icon.clickable {:on-click #(js/alert "no implemented")
                                                         :aria-hidden "true"}]])]])
             (for [{:keys [filename filetype age subject full-path]} (sort-by :filename file-rows)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
@@ -367,7 +376,12 @@
                [:div.file-item.col-2
                 [:p.nomargin.lfloat {:style {:line-height "40px" :height "40px"}} age]
                 (when commit-is-ref
-                  [:div.rfloat {:style {:line-height "40px"}} [:i.fa.fa-trash.file-icon {:aria-hidden "true"}]])]])))]])
+                  [:div.rfloat {:style {:line-height "40px"}} [:i.fa.fa-trash.file-icon.clickable
+                                                               {:on-click #(when (js/confirm "Are you sure?")
+                                                                             (delete-file {:project @(:active-project app-state)
+                                                                                           :commit (oget active-commit "sha1")
+                                                                                           :filepath full-path}))
+                                                                :aria-hidden "true"}]])]])))]])
      (project-ui-header)
      (footer)
      (add-file-dialog show-add-file-dialog)]))

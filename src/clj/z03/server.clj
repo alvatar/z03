@@ -84,7 +84,7 @@
 
 (def uploads-folder "/tmp/uploads/")
 
-(defn send-files [user-id project {{file :file} :params :as req}]
+(defn send-files [user-id project commit {{file :file} :params :as req}]
   (let [repo-dir (:git-repo (db/project-get-by :name project))
         copy-file (fn [{:keys [filename tempfile]}]
                     (let [local-file (str repo-dir "/" filename)]
@@ -93,10 +93,10 @@
     (if (vector? file)
       (dorun (map copy-file file))
       (copy-file file))
-    (git/commit-ammend-new user-id repo-dir)
+    (git/commit-ammend-new user-id repo-dir commit (:path-info req)))
     {:status 200
      :headers {"Content-Type" "text/plain"}
-     :body "OK"}))
+     :body "OK"})
 
 (defroutes app
   (GET "/" req (render (html/index) req))
@@ -122,8 +122,10 @@
                                                (:git-repo project)
                                                commit
                                                (str "." (:path-info req)))))))
-  (POST "/u/:user/:project/send-files" [user project :as req]
-        (send-files user project req))
+  (context "/u/:user/:project/:commit/send-files" [user project commit :as req]
+           (POST "/*" []
+                 (authenticated user
+                                (send-files user project commit req))))
   (GET "/view" req (render (html/presenter) req))
   (GET "/login" req (render (html/login) req))
   (POST "/login" req login-handler)
