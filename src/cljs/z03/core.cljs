@@ -276,11 +276,12 @@
           (doseq [file-key (.keys js/Object files)]
             (.append fd name (aget files file-key)))
           fd)]
-    (ajax/POST (gstring/format "/u/%s/%s/%s/send-files/%"
+    (ajax/POST (gstring/format "/u/%s/%s/%s/send-files/%s"
                                (:user-name @(:user app-state))
                                @(:active-project app-state)
-                               (oget @(:active-commit app-state) "sha1")
-                               @(:current-path app-state))
+                               (get @(:refs app-state)
+                                    (oget @(:active-commit app-state) "sha1"))
+                               (clojure.string/join "/" @(:current-path app-state)))
                {:method :post
                 :headers {:X-CSRF-Token @(:csrf-token app-state)}
                 :body form-data
@@ -308,6 +309,7 @@
   [_state]
   (let [files (react (:files app-state))
         active-commit (react (:active-commit app-state))
+        active-branch (when active-commit (get @(:refs app-state) (oget active-commit "sha1")))
         num-commits (count (react (:commits app-state)))
         commit-is-ref (and active-commit
                            (some (let [h (oget active-commit "sha1")] #(= h %))
@@ -366,7 +368,7 @@
                 (when commit-is-ref
                   [:div.rfloat {:style {:line-height "40px"}}
                    #_[:i.fa.fa-trash.file-icon.clickable {:on-click #(js/alert "no implemented")
-                                                        :aria-hidden "true"}]])]])
+                                                          :aria-hidden "true"}]])]])
             (for [{:keys [filename filetype age subject full-path]} (sort-by :filename file-rows)]
               [:div.grid-noGutter {:key filename :style {:height "40px" :border-style "solid" :border-width "0 0 1 0" :border-color "#ccc"}}
                [:div.file-item.col-3.clickable {:on-click #(reset! (:active-file app-state) full-path)}
@@ -379,7 +381,7 @@
                   [:div.rfloat {:style {:line-height "40px"}} [:i.fa.fa-trash.file-icon.clickable
                                                                {:on-click #(when (js/confirm "Are you sure?")
                                                                              (delete-file {:project @(:active-project app-state)
-                                                                                           :commit (oget active-commit "sha1")
+                                                                                           :branch active-branch
                                                                                            :filepath full-path}))
                                                                 :aria-hidden "true"}]])]])))]])
      (project-ui-header)

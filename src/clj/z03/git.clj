@@ -155,8 +155,9 @@
   (ensure-removal #(get-file user-id repo-dir commit file) f))
 
 (defn commit-ammend-new [user-id repo-dir commit subdir]
+  (println (format "cd %s%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir commit))
   (ssh-send user-id
-            (format "cd %s/%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir commit)))
+            (format "cd %s%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir commit)))
 
 (defn delete-file [user-id repo-dir commit filepath]
   (ssh-send user-id
