@@ -154,14 +154,13 @@
 (defn with-git-file [user-id repo-dir commit file f]
   (ensure-removal #(get-file user-id repo-dir commit file) f))
 
-(defn commit-ammend-new [user-id repo-dir commit subdir]
-  (println (format "cd %s%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir commit))
+(defn commit-ammend-new [user-id repo-dir branch subdir]
   (ssh-send user-id
-            (format "cd %s%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir commit)))
+            (format "cd %s%s && git checkout %s & git add . && git commit --amend --no-edit" repo-dir subdir branch)))
 
-(defn delete-file [user-id repo-dir commit filepath]
+(defn delete-file [user-id repo-dir branch filepath]
   (ssh-send user-id
-            (format "cd %s && git checkout %s && git rm -f %s && git commit --amend --no-edit" repo-dir commit filepath)))
+            (format "cd %s && git checkout %s && git rm -f %s && git commit --amend --no-edit" repo-dir branch filepath)))
 
 ;; (defn search-in-array [arr c n]
 ;;   (let [len (count arr)]

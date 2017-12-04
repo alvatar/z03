@@ -73,14 +73,14 @@
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [{user-id :id} (get-in ring-req [:session :identity])
         project (db/project-get-by :name (:project ?data))
-        commit (:commit ?data)
+        branch (:branch ?data)
         filepath (:filepath ?data)]
     (if (some-> project
                 :user-id
                 (= user-id))
-      (do (git/delete-file user-id (:git-repo project) commit filepath)
+      (do (git/delete-file user-id (:git-repo project) branch filepath)
           (?reply-fn {:status :ok
-                      :filetree (git/get-tree user-id (:git-repo project) commit)}))
+                      :filetree (git/get-tree user-id (:git-repo project) branch)}))
       (?reply-fn {:status :error}))))
 
 ;;
